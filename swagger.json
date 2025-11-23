@@ -1,0 +1,2752 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API Marketplace",
+    "version": "1.0.0",
+    "description": "Documentación de la API"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Appeal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "incidenceId": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentCategoryId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "subcategories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          }
+        }
+      },
+      "CategoryInput": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentCategoryId": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "Conversation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "productId": {
+            "type": "integer"
+          },
+          "buyerId": {
+            "type": "integer"
+          },
+          "sellerId": {
+            "type": "integer"
+          }
+        }
+      },
+      "ConversationCreate": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": {
+            "type": "integer"
+          }
+        }
+      },
+      "ConversationUpdate": {
+        "type": "object",
+        "properties": {
+          "markRead": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Favorite": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer"
+          },
+          "productId": {
+            "type": "integer"
+          },
+          "Product": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "price": {
+                "type": "number"
+              },
+              "User": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "lastname": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "FavoriteCreate": {
+        "type": "object",
+        "required": ["productId"],
+        "properties": {
+          "productId": {
+            "type": "integer"
+          }
+        }
+      },
+      "Incidence": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "dateIncidence": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "resolved"]
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "moderatorId": {
+            "type": "integer"
+          },
+          "productId": {
+            "type": "integer"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "conversationId": {
+            "type": "integer"
+          },
+          "senderId": {
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "read": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MessageCreate": {
+        "type": "object",
+        "required": ["conversationId", "content"],
+        "properties": {
+          "conversationId": {
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "typeId": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificationCreate": {
+        "type": "object",
+        "required": ["typeName", "message", "title"],
+        "properties": {
+          "typeName": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "NotificationUpdate": {
+        "type": "object",
+        "properties": {
+          "read": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "sellerId": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "locationCoords": {
+            "$ref": "#/components/schemas/LocationCoords"
+          },
+          "price": {
+            "type": "number",
+            "format": "float"
+          },
+          "categoryId": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "sold", "inactive", "reserved", "restricted"],
+            "default": "active"
+          },
+          "moderationStatus": {
+            "type": "string",
+            "description": "Parámetro de moderación (sin enum). Por defecto 'active'."
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "URL de la foto del producto"
+            }
+          }
+        },
+        "example": {
+          "id": 1,
+          "sellerId": 10,
+          "title": "Bicicleta de montaña",
+          "description": "Bicicleta en excelente estado, casi nueva",
+          "location": "Santiago, Chile",
+          "locationCoords": {
+            "lat": -33.4489,
+            "lng": -70.6693
+          },
+          "price": 250.5,
+          "categoryId": 3,
+          "status": "active",
+          "moderationStatus": "active",
+          "photos": [
+            "https://example.com/foto1.jpg",
+            "https://example.com/foto2.jpg"
+          ]
+        }
+      },
+      "ProductInput": {
+        "type": "object",
+        "required": ["sellerId", "title", "description", "price", "categoryId"],
+        "properties": {
+          "sellerId": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "locationCoords": {
+            "$ref": "#/components/schemas/LocationCoords"
+          },
+          "price": {
+            "type": "number",
+            "format": "float"
+          },
+          "categoryId": {
+            "type": "integer"
+          }
+        },
+        "example": {
+          "sellerId": 10,
+          "title": "Bicicleta de montaña",
+          "description": "Bicicleta en excelente estado, casi nueva",
+          "location": "Santiago, Chile",
+          "locationCoords": {
+            "lat": -33.4489,
+            "lng": -70.6693
+          },
+          "price": 250.5,
+          "categoryId": 3
+        }
+      },
+      "LocationCoords": {
+        "type": "object",
+        "required": ["lat", "lng"],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "float"
+          },
+          "lng": {
+            "type": "number",
+            "format": "float"
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "lat": -33.4489,
+          "lng": -70.6693
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "dateReport": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha y hora en que se creó el reporte"
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "integer"
+          },
+          "productId": {
+            "type": "integer"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "dni": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastname": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "ratingCount": {
+            "type": "integer",
+            "description": "Cantidad de calificaciones recibidas"
+          },
+          "Roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "roleName": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "UserRegister": {
+        "type": "object",
+        "required": [
+          "dni",
+          "email",
+          "name",
+          "lastname",
+          "password",
+          "phone",
+          "roleId"
+        ],
+        "properties": {
+          "dni": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastname": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "integer"
+          }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "lastname": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/appeals": {
+      "get": {
+        "tags": ["Appeals"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener todas las apelaciones",
+        "responses": {
+          "200": {
+            "description": "Lista de apelaciones"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Appeals"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Crear una apelación",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Appeal"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Apelación creada"
+          }
+        }
+      }
+    },
+    "/appeals/{id}": {
+      "get": {
+        "tags": ["Appeals"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener apelación por id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Apelación encontrada"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Appeals"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Actualizar una apelación",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Appeal"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Apelación actualizada"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Appeals"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Eliminar una apelación",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Apelación eliminada"
+          }
+        }
+      }
+    },
+    "/appeals/incidence/{incidenceId}": {
+      "get": {
+        "tags": ["Appeals"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener apelaciones de una incidencia",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incidenceId",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de apelaciones para la incidencia"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "Obtener todas las categorías",
+        "tags": ["Categories"],
+        "responses": {
+          "200": {
+            "description": "Lista de categorías recuperada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error al buscar categorías"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear una nueva categoría",
+        "tags": ["Categories"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Categoría creada exitosamente"
+          },
+          "400": {
+            "description": "Datos inválidos o categoría ya existente"
+          },
+          "500": {
+            "description": "Error al crear categoría"
+          }
+        }
+      }
+    },
+    "/categories/main": {
+      "get": {
+        "summary": "Obtener categorías principales (sin categoría padre) con subcategorías",
+        "tags": ["Categories"],
+        "responses": {
+          "200": {
+            "description": "Lista de categorías principales con subcategorías",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error al recuperar categorías principales"
+          }
+        }
+      }
+    },
+    "/categories/{id}": {
+      "get": {
+        "summary": "Obtener una categoría por ID",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categoría encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Categoría no encontrada"
+          },
+          "500": {
+            "description": "Error al buscar categoría"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar una categoría",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Categoría actualizada exitosamente"
+          },
+          "400": {
+            "description": "Categoría padre inválida o conflicto"
+          },
+          "404": {
+            "description": "Categoría no encontrada"
+          },
+          "500": {
+            "description": "Error al actualizar categoría"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar una categoría",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Categoría eliminada exitosamente"
+          },
+          "400": {
+            "description": "No se puede eliminar una categoría con subcategorías"
+          },
+          "404": {
+            "description": "Categoría no encontrada"
+          },
+          "500": {
+            "description": "Error al eliminar categoría"
+          }
+        }
+      }
+    },
+    "/categories/{parentId}/subcategories": {
+      "get": {
+        "summary": "Obtener subcategorías de una categoría padre",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parentId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de subcategorías recuperada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error al recuperar subcategorías"
+          }
+        }
+      }
+    },
+    "/conversations/": {
+      "get": {
+        "summary": "Lista las conversaciones del usuario autenticado",
+        "tags": ["Conversations"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de conversaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Conversation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crea (o reutiliza) una conversación con el vendedor del producto",
+        "tags": ["Conversations"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conversación creada o existente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o conversación contigo mismo"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        }
+      }
+    },
+    "/conversations/{id}": {
+      "get": {
+        "summary": "Obtiene una conversación por ID (solo si participas)",
+        "tags": ["Conversations"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la conversación"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversación encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Conversación no encontrada"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualiza la conversación (p. ej., marcar mensajes como leídos)",
+        "tags": ["Conversations"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la conversación"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversación actualizada"
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Conversación no encontrada"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina una conversación (solo participantes)",
+        "tags": ["Conversations"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la conversación"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conversación eliminada"
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Conversación no encontrada"
+          }
+        }
+      }
+    },
+    "/favorites/": {
+      "get": {
+        "summary": "Lista los favoritos del usuario autenticado",
+        "tags": ["Favorites"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de productos favoritos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Favorite"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Agrega un producto a favoritos",
+        "tags": ["Favorites"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavoriteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Producto agregado a favoritos"
+          },
+          "400": {
+            "description": "Producto ya está en favoritos o datos inválidos"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        }
+      }
+    },
+    "/favorites/{productId}": {
+      "delete": {
+        "summary": "Elimina un producto de favoritos",
+        "tags": ["Favorites"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productId",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID del producto a eliminar de favoritos"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto eliminado de favoritos"
+          },
+          "404": {
+            "description": "Favorito no encontrado"
+          }
+        }
+      }
+    },
+    "/incidences": {
+      "get": {
+        "tags": ["Incidences"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener todas las incidencias",
+        "responses": {
+          "200": {
+            "description": "Lista de incidencias"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Incidences"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Crear una incidencia",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Incidence"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Incidencia creada"
+          }
+        }
+      }
+    },
+    "/incidences/{id}": {
+      "get": {
+        "tags": ["Incidences"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener una incidencia por id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Incidencia encontrada"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Incidences"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Actualizar una incidencia",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Incidence"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Incidencia actualizada"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Incidences"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Eliminar una incidencia",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Incidencia eliminada"
+          }
+        }
+      }
+    },
+    "/incidences/user/{userId}": {
+      "get": {
+        "tags": ["Incidences"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener incidencias por usuario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de incidencias del usuario"
+          }
+        }
+      }
+    },
+    "/messages/": {
+      "get": {
+        "summary": "Lista mensajes de una conversación del usuario",
+        "tags": ["Messages"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "conversationId",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la conversación"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de mensajes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Message"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Envía un mensaje en una conversación",
+        "tags": ["Messages"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mensaje creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado (no eres participante)"
+          },
+          "404": {
+            "description": "Conversación no encontrada"
+          }
+        }
+      }
+    },
+    "/notifications/": {
+      "get": {
+        "summary": "Lista notificaciones del usuario autenticado",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de notificaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crea una notificación para el usuario autenticado (útil para pruebas)",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notificación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{id}": {
+      "get": {
+        "summary": "Obtiene una notificación por ID (solo si es tuya)",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la notificación"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notificación encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Notificación no encontrada"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualiza una notificación (marcar como leída)",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la notificación"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notificación actualizada"
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Notificación no encontrada"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina una notificación",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID de la notificación"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notificación eliminada"
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Notificación no encontrada"
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "Obtener productos activos (público)",
+        "description": "Recupera una lista con productos cuyo status es 'active' y moderationStatus es 'active'.",
+        "tags": ["Products"],
+        "responses": {
+          "200": {
+            "description": "Lista de productos recuperada exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error al recuperar productos"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear un nuevo producto con fotos",
+        "description": "Crea un nuevo producto asociado a un vendedor (status siempre inicia en 'active'; no editable en este endpoint), permitiendo subir múltiples imágenes.",
+        "tags": ["Products"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ProductInput"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "locationCoords": {
+                        "$ref": "#/components/schemas/LocationCoords"
+                      },
+                      "photos": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "binary"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Producto creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Categoría o vendedor no encontrado"
+          },
+          "500": {
+            "description": "Error al crear producto"
+          }
+        }
+      }
+    },
+    "/products/moderation": {
+      "get": {
+        "summary": "Obtener todos los productos (moderación)",
+        "description": "Devuelve todos los productos sin importar status ni moderationStatus. Solo administradores.",
+        "tags": ["Products"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de productos recuperada exitosamente (moderación)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "500": {
+            "description": "Error al recuperar productos"
+          }
+        }
+      }
+    },
+    "/products/my": {
+      "get": {
+        "summary": "Obtener los productos del usuario autenticado",
+        "description": "Devuelve los productos creados por el usuario autenticado.",
+        "tags": ["Products"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de productos del usuario autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado"
+          },
+          "500": {
+            "description": "Error al recuperar productos"
+          }
+        }
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "summary": "Obtener un producto por ID",
+        "description": "Devuelve un producto específico basado en su ID.",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar un producto y opcionalmente reemplazar sus fotos",
+        "description": "Permite actualizar los datos de un producto existente (incluido 'status') y subir nuevas imágenes. Para el parámetro de moderación, usar PUT /products/{id}/moderation.",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ProductInput"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "sold",
+                          "inactive",
+                          "reserved",
+                          "restricted"
+                        ]
+                      },
+                      "photos": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "binary"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Producto actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Categoría no válida"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          },
+          "500": {
+            "description": "Error al actualizar producto"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar un producto",
+        "description": "Elimina un producto del sistema basado en su ID.",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto eliminado exitosamente"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          },
+          "500": {
+            "description": "Error al eliminar producto"
+          }
+        }
+      }
+    },
+    "/products/{id}/moderation": {
+      "put": {
+        "summary": "Actualizar el parámetro de moderación de un producto",
+        "description": "Modifica únicamente moderationStatus (solo administradores). No tiene enum y por defecto es 'active'.",
+        "tags": ["Products"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["moderationStatus"],
+                "properties": {
+                  "moderationStatus": {
+                    "type": "string",
+                    "description": "Estado de moderación, por defecto 'active'. Sin enum.",
+                    "example": "flagged"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Moderation status actualizado exitosamente"
+          },
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "403": {
+            "description": "No autorizado"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          }
+        }
+      }
+    },
+    "/products/{id}/status": {
+      "patch": {
+        "summary": "Actualizar el estado de un producto",
+        "description": "Cambia el estado de un producto existente (por ejemplo, activo, vendido, reservado, inactivo).",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "sold",
+                      "inactive",
+                      "reserved",
+                      "restricted"
+                    ],
+                    "example": "sold"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado exitosamente"
+          },
+          "400": {
+            "description": "Status no válido"
+          },
+          "404": {
+            "description": "Producto no encontrado"
+          },
+          "500": {
+            "description": "Error al actualizar el estado"
+          }
+        }
+      }
+    },
+    "/ratings/{sellerId}": {
+      "post": {
+        "summary": "Crear o actualizar calificación de un vendedor",
+        "tags": ["Ratings"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sellerId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["score"],
+                "properties": {
+                  "score": {
+                    "type": "number",
+                    "format": "float",
+                    "example": 4.5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "example": "Excelente atención y rápido envío"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calificación guardada"
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "404": {
+            "description": "Vendedor no encontrado"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar calificación existente de un vendedor",
+        "tags": ["Ratings"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sellerId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["score"],
+                "properties": {
+                  "score": {
+                    "type": "number",
+                    "format": "float",
+                    "example": 3.5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "example": "Modificando mi opinión tras segunda compra"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calificación actualizada"
+          },
+          "400": {
+            "description": "Error de validación"
+          },
+          "404": {
+            "description": "Calificación o vendedor no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar mi calificación hacia un vendedor",
+        "tags": ["Ratings"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sellerId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calificación eliminada"
+          },
+          "404": {
+            "description": "Calificación no encontrada"
+          }
+        }
+      }
+    },
+    "/reports": {
+      "get": {
+        "tags": ["Reports"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener todos los reportes",
+        "responses": {
+          "200": {
+            "description": "Lista de reportes"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Reports"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Crear un reporte",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Report"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reporte creado"
+          }
+        }
+      }
+    },
+    "/reports/{id}": {
+      "get": {
+        "tags": ["Reports"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener un reporte por id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reporte encontrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Reports"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Eliminar un reporte",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reporte eliminado"
+          }
+        }
+      }
+    },
+    "/reports/user/{userId}": {
+      "get": {
+        "tags": ["Reports"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Obtener reportes hechos por un usuario",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de reportes del usuario"
+          }
+        }
+      }
+    },
+    "/users/": {
+      "get": {
+        "summary": "Obtiene todos los usuarios",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/whoami": {
+      "get": {
+        "summary": "Obtiene usuario actual basado en el token",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "delete": {
+        "summary": "Elimina la cuenta del usuario autenticado",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cuenta eliminada correctamente"
+          },
+          "401": {
+            "description": "No autenticado"
+          }
+        }
+      }
+    },
+    "/users/register": {
+      "post": {
+        "summary": "Registra un nuevo usuario",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dni": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "lastname": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "roleId": {
+                    "type": "integer"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario registrado"
+          },
+          "400": {
+            "description": "Email, DNI ya registrado o rol no válido"
+          }
+        }
+      }
+    },
+    "/users/login": {
+      "post": {
+        "summary": "Login de usuario",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso, retorna token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Usuario no encontrado o contraseña incorrecta"
+          },
+          "403": {
+            "description": "Cuenta no verificada"
+          }
+        }
+      }
+    },
+    "/users/password": {
+      "put": {
+        "summary": "Actualizar la contraseña de un usuario",
+        "description": "Permite al usuario actualizar su contraseña proporcionando la contraseña actual y una nueva.",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["oldPassword", "newPassword"],
+                "properties": {
+                  "oldPassword": {
+                    "type": "string",
+                    "description": "Contraseña actual del usuario",
+                    "example": "123456"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "description": "Nueva contraseña",
+                    "example": "abcDEF123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña actualizada correctamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Usuario actualizado"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Contraseña incorrecta"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          },
+          "500": {
+            "description": "Error al actualizar usuario"
+          }
+        }
+      }
+    },
+    "/users/resend-verification": {
+      "post": {
+        "summary": "Reenviar correo de verificación",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "usuario@correo.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Correo de verificación reenviado (si aplica)"
+          },
+          "400": {
+            "description": "Email requerido"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      }
+    },
+    "/users/verify-email": {
+      "get": {
+        "summary": "Verifica la cuenta mediante token",
+        "description": "Devuelve una página HTML indicando el resultado de la verificación.",
+        "tags": ["Users"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML con resultado de verificación",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Token inválido o faltante"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      }
+    },
+    "/users/request-password-reset": {
+      "post": {
+        "summary": "Solicitar restablecimiento de contraseña",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "usuario@correo.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Si el correo existe, se envía un enlace de restablecimiento"
+          },
+          "400": {
+            "description": "Email requerido"
+          }
+        }
+      }
+    },
+    "/users/reset-password": {
+      "post": {
+        "summary": "Restablecer contraseña con token",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token", "newPassword"],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "example": "abcDEF123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña restablecida"
+          },
+          "400": {
+            "description": "Token inválido o faltante"
+          }
+        }
+      },
+      "get": {
+        "summary": "Validar token de restablecimiento (HTML)",
+        "description": "Devuelve una página HTML para confirmar el token y permitir restablecer contraseña desde el navegador.",
+        "tags": ["Users"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página HTML",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Token inválido o faltante"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Obtiene un usuario por ID",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID del usuario"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualiza un usuario",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID del usuario"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina un usuario",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID del usuario"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario eliminado"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      }
+    },
+    "/users/{id}/avatar": {
+      "put": {
+        "summary": "Actualiza el avatar de un usuario",
+        "tags": ["Users"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "required": true,
+            "description": "ID del usuario"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar actualizado"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Appeals",
+      "description": "Gestión de apelaciones sobre incidencias"
+    },
+    {
+      "name": "Categories",
+      "description": "API para gestión de categorías y subcategorías"
+    },
+    {
+      "name": "Incidences",
+      "description": "Gestión de incidencias"
+    },
+    {
+      "name": "Products",
+      "description": "API para gestión de productos"
+    },
+    {
+      "name": "Ratings",
+      "description": "Calificaciones de vendedores"
+    },
+    {
+      "name": "Reports",
+      "description": "Gestión de reportes"
+    }
+  ]
+}
