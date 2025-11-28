@@ -275,7 +275,7 @@ export default function ProductosScreen() {
           renderItem={({ item }) => (
             <ProductCard
               product={item}
-              isFavorite={favoriteIds.has(item.id)}
+              isFavorite={favoriteIds.has(Number(item.id))}
               onPress={() => router.push(`/producto/${item.id}`)}
               onToggleFavorite={() => handleFavorite(item.id)}
               showBadges={true}

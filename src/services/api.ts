@@ -1,5 +1,5 @@
-import axios from "axios";
-import Constants from "expo-constants";
+import axios from 'axios';
+import Constants from 'expo-constants';
 import * as SecureStore from "expo-secure-store";
 
 // Determine a sensible default backend URL for development.
@@ -597,11 +597,21 @@ export const favoriteAPI = {
       throw new Error(`Invalid productId: ${productId}`);
     }
 
-    const response = await api.delete(`/favorites/${numericProductId}`);
+    console.log('[favoriteAPI] Removing favorite for productId:', numericProductId);
 
-    favoriteAPI.clearCache();
-
-    return response.data;
+    try {
+      const response = await api.delete(`/favorites/${numericProductId}`);
+      favoriteAPI.clearCache();
+      return response.data;
+    } catch (error: any) {
+      // If 404, the favorite was already removed - that's okay
+      if (error.response?.status === 404) {
+        console.log('[favoriteAPI] Favorite already removed (404)');
+        favoriteAPI.clearCache();
+        return { message: "Favorite already removed" };
+      }
+      throw error;
+    }
   },
 
   isFavorite: async (productId: number) => {

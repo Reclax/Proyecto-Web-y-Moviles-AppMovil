@@ -79,6 +79,17 @@ export default function HomeScreen() {
   const featuredProducts = useMemo(() => products.slice(0, 6), [products]);
   const mainCategories = useMemo(() => categories.slice(0, 6), [categories]);
 
+  // Debug log for favorites
+  useEffect(() => {
+    if (featuredProducts.length > 0) {
+      console.log('[HomeScreen] favoriteIds:', Array.from(favoriteIds));
+      console.log('[HomeScreen] Product IDs:', featuredProducts.map(p => p.id));
+      featuredProducts.forEach(p => {
+        console.log(`[HomeScreen] Product ${p.id} isFavorite:`, favoriteIds.has(p.id));
+      });
+    }
+  }, [favoriteIds, featuredProducts]);
+
   const handleFavorite = async (id: number) => {
     try {
       await toggleFavorite(id);
@@ -246,7 +257,7 @@ export default function HomeScreen() {
               <ProductCard
                 key={product.id}
                 product={product}
-                isFavorite={favoriteIds.has(product.id)}
+                isFavorite={favoriteIds.has(Number(product.id))}
                 onPress={() => router.push(`/producto/${product.id}`)}
                 onToggleFavorite={() => handleFavorite(product.id)}
               />

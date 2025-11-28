@@ -118,8 +118,8 @@ export default function ChatConversationScreen() {
     console.log('[Chat] New message received:', message);
     if (message.conversationId === convId) {
       // Check if message already exists (avoid duplicates)
-      setMessages((prev) => {
-        const exists = prev.some(m => m.id === message.id);
+      setMessages((prev: Message[]) => {
+        const exists = prev.some((m: Message) => m.id === message.id);
         if (exists) return prev;
         return [message, ...prev];
       });
@@ -130,8 +130,8 @@ export default function ChatConversationScreen() {
     console.log('[Chat] Message sent confirmation:', message);
     if (message.conversationId === convId) {
       // Update pending message with real data
-      setMessages((prev) => 
-        prev.map(m => {
+      setMessages((prev: Message[]) => 
+        prev.map((m: Message) => {
           if (m.pending && m.content === message.content) {
             return { ...message, pending: false };
           }
@@ -263,7 +263,7 @@ export default function ChatConversationScreen() {
       pending: true,
     };
 
-    setMessages((prev) => [tempMessage, ...prev]);
+    setMessages((prev: Message[]) => [tempMessage, ...prev]);
     setInputText("");
     setSending(true);
 
@@ -291,7 +291,7 @@ export default function ChatConversationScreen() {
       console.error("Error sending message:", error);
       Alert.alert("Error", "No se pudo enviar el mensaje");
       // Remove optimistic message on error
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setMessages((prev: Message[]) => prev.filter((m: Message) => m.id !== tempId));
     } finally {
       setSending(false);
     }
@@ -381,7 +381,7 @@ export default function ChatConversationScreen() {
                 source={{ uri: chatDetails.vendorImage }}
                 style={styles.avatar}
                 onError={() => {
-                  setChatDetails((prev) =>
+                  setChatDetails((prev: ChatDetails | null) =>
                     prev ? { ...prev, vendorImage: null } : null
                   );
                 }}
@@ -407,7 +407,7 @@ export default function ChatConversationScreen() {
                 source={{ uri: chatDetails.product.image }}
                 style={styles.productImage}
                 onError={() => {
-                  setChatDetails((prev) =>
+                  setChatDetails((prev: ChatDetails | null) =>
                     prev
                       ? {
                           ...prev,

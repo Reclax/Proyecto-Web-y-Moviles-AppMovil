@@ -282,7 +282,7 @@ export default function ChatScreen() {
       );
 
       // Sort by last message time (descending)
-      mappedConversations.sort((a, b) => {
+      mappedConversations.sort((a: ConversationUI, b: ConversationUI) => {
         // Simple sort, ideally parse dates
         return 0;
       });
@@ -302,7 +302,7 @@ export default function ChatScreen() {
   }, []);
 
   const filteredConversations = conversations.filter(
-    (conv) =>
+    (conv: ConversationUI) =>
       conv.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       conv.product.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
