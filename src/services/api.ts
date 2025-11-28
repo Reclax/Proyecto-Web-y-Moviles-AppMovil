@@ -2,29 +2,8 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import * as SecureStore from "expo-secure-store";
 
-// Determine a sensible default backend URL for development.
-// Prefer explicitly configured extra.apiUrl, then environment variable, then derive the host
-// from Expo debuggerHost (useful when running on a device) and finally fall back to localhost.
-function getDevHostFromDebugger(): string | null {
-  try {
-    // debuggerHost has the form "192.168.0.9:8081" when running Expo in development
-    const dbg =
-      (Constants as any).manifest?.debuggerHost ||
-      (Constants as any).expoGo?.debuggerHost;
-    if (dbg) return dbg.split(":")[0];
-  } catch (e) {
-    // ignore
-  }
-  return null;
-}
-
-const API_BASE_URL =
-  // allow setting via EXPO_PUBLIC_API_URL at runtime (expo env loader in scripts)
-  process.env.EXPO_PUBLIC_API_URL ||
-  (Constants.expoConfig?.extra as any)?.apiUrl ||
-  (getDevHostFromDebugger()
-    ? `http://${getDevHostFromDebugger()}:8080`
-    : "http://localhost:8080");
+// Get API URL from environment variable only
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
 
 console.log("API_BASE_URL configured:", API_BASE_URL);
 

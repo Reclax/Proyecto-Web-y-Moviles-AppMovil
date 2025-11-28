@@ -35,13 +35,13 @@ export const useWebSocket = () => {
       console.log('[useWebSocket] Connected event received');
       setIsConnected(true);
       setError(null);
-      setReconnectStatus(websocketService.getConnectionStatus());
+      setReconnectStatus(websocketService.getReconnectStatus());
     };
 
     const handleDisconnected = () => {
       console.log('[useWebSocket] Disconnected event received');
       setIsConnected(false);
-      setReconnectStatus(websocketService.getConnectionStatus());
+      setReconnectStatus(websocketService.getReconnectStatus());
     };
 
     const handleError = (error: Error) => {
@@ -53,7 +53,7 @@ export const useWebSocket = () => {
     const handleMaxReconnectAttemptsReached = () => {
       console.log('[useWebSocket] Max reconnect attempts reached');
       setError(new Error('No se pudo reconectar después de varios intentos'));
-      setReconnectStatus(websocketService.getConnectionStatus());
+      setReconnectStatus(websocketService.getReconnectStatus());
     };
 
     websocketService.on('connected', handleConnected);
@@ -177,7 +177,11 @@ export const useWebSocketMessages = (conversationId: number | null) => {
         payload.conversationId?.toString() === conversationIdRef.current?.toString() &&
         payload.userId !== websocketService.currentUserId
       ) {
-        setTypingUsers((prev) => new Set([...prev, payload.userId]));
+        setTypingUsers((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(payload.userId);
+          return newSet;
+        });
       }
     };
 

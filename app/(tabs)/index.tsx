@@ -85,7 +85,8 @@ export default function HomeScreen() {
       console.log('[HomeScreen] favoriteIds:', Array.from(favoriteIds));
       console.log('[HomeScreen] Product IDs:', featuredProducts.map(p => p.id));
       featuredProducts.forEach(p => {
-        console.log(`[HomeScreen] Product ${p.id} isFavorite:`, favoriteIds.has(p.id));
+        const numericId = Number(p.id);
+        console.log(`[HomeScreen] Product ${p.id} (${typeof p.id}) -> Number: ${numericId} isFavorite:`, favoriteIds.has(numericId));
       });
     }
   }, [favoriteIds, featuredProducts]);

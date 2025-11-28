@@ -92,9 +92,30 @@ export default function ChatScreen() {
     try {
       // Check if user is authenticated first
       const token = await authAPI.getAuthToken();
-      const userData = await authAPI.getUserData();
       
-      if (!token || !userData) {
+      if (!token) {
+        console.log('[ChatList] No token, skipping WebSocket connection');
+        return;
+      }
+
+      // Try to get user data from storage, or fetch from server
+      let userData = await authAPI.getUserData();
+      
+      if (!userData) {
+        console.log('[ChatList] No userData in storage, fetching from server...');
+        try {
+          userData = await userAPI.whoAmI();
+          if (userData) {
+            // Save it for future use (token already exists)
+            await authAPI.saveAuthData(token, userData);
+            console.log('[ChatList] User data fetched and saved:', userData.id);
+          }
+        } catch (err) {
+          console.error('[ChatList] Failed to fetch user data:', err);
+        }
+      }
+      
+      if (!userData) {
         console.log('[ChatList] No authenticated user, skipping WebSocket connection');
         return;
       }
