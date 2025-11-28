@@ -10,7 +10,7 @@ import { palette, radius, shadows, spacing, typography } from "@/theme";
 import { getAbsoluteUrl } from "@/utils/productUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import RatingSellerModal from "@/components/RatingSellerModal";
 
 interface Message {
   id: number;
@@ -36,9 +37,11 @@ interface Message {
 }
 
 interface ChatDetails {
+  vendorId: number;
   vendorName: string;
   vendorAvatar: string;
   vendorImage: string | null;
+  isSeller: boolean;
   product: {
     id: number;
     title: string;
@@ -58,7 +61,9 @@ export default function ChatConversationScreen() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const convId = parseInt(conversationId);
 
   useEffect(() => {
@@ -98,6 +103,7 @@ export default function ChatConversationScreen() {
       websocketService.on("messageSent", handleMessageSent);
       websocketService.on("typingStart", handleTypingStart);
       websocketService.on("typingStop", handleTypingStop);
+      websocketService.on("messageReadUpdate", handleMessageRead);
       
       console.log('[Chat] WebSocket setup complete for conversation:', convId);
     } catch (error) {
@@ -111,54 +117,117 @@ export default function ChatConversationScreen() {
     websocketService.off("messageSent", handleMessageSent);
     websocketService.off("typingStart", handleTypingStart);
     websocketService.off("typingStop", handleTypingStop);
+    websocketService.off("messageReadUpdate", handleMessageRead);
     websocketService.leaveConversation(convId);
   };
 
-  const handleNewMessage = (message: any) => {
-    console.log('[Chat] New message received:', message);
-    if (message.conversationId === convId) {
-      // Check if message already exists (avoid duplicates)
-      setMessages((prev: Message[]) => {
-        const exists = prev.some((m: Message) => m.id === message.id);
-        if (exists) return prev;
-        return [message, ...prev];
-      });
-    }
-  };
+  const handleNewMessage = useCallback(
+    (message: any) => {
+      console.log("[Chat] New message received:", message);
+      if (message.conversationId === convId || message.conversationId?.toString() === conversationId) {
+        setMessages((prev: Message[]) => {
+          const exists = prev.some((m) => m.id === message.id);
+          if (exists) return prev;
 
-  const handleMessageSent = (message: any) => {
-    console.log('[Chat] Message sent confirmation:', message);
-    if (message.conversationId === convId) {
-      // Update pending message with real data
-      setMessages((prev: Message[]) => 
-        prev.map((m: Message) => {
-          if (m.pending && m.content === message.content) {
-            return { ...message, pending: false };
-          }
-          return m;
-        })
-      );
-    }
-  };
+          const newMessage: Message = {
+            id: message.id,
+            content: message.content,
+            senderId: message.senderId,
+            createdAt: message.createdAt || message.sentAt || new Date().toISOString(),
+            read: message.read || false,
+            pending: false,
+          };
 
-  const handleTypingStart = (data: any) => {
-    if (data.conversationId === convId && data.userId !== currentUserId) {
-      setIsTyping(true);
-    }
-  };
+          return [newMessage, ...prev];
+        });
 
-  const handleTypingStop = (data: any) => {
-    if (data.conversationId === convId) {
-      setIsTyping(false);
-    }
-  };
+        // Mark as read if from other user
+        if (message.senderId !== currentUserId) {
+          websocketService.markMessageAsRead(message.id);
+        }
+      }
+    },
+    [convId, conversationId, currentUserId]
+  );
+
+  const handleMessageSent = useCallback(
+    (message: any) => {
+      console.log("[Chat] Message sent confirmation:", message);
+      if (message.conversationId === convId || message.conversationId?.toString() === conversationId) {
+        setMessages((prev: Message[]) =>
+          prev.map((m) => {
+            if (m.pending && m.content === message.content) {
+              return {
+                id: message.id,
+                content: message.content,
+                senderId: message.senderId,
+                createdAt: message.createdAt || message.sentAt || m.createdAt,
+                read: message.read || false,
+                pending: false,
+              };
+            }
+            return m;
+          })
+        );
+      }
+    },
+    [convId, conversationId]
+  );
+
+  const handleTypingStart = useCallback(
+    (data: any) => {
+      if (
+        (data.conversationId === convId || data.conversationId?.toString() === conversationId) &&
+        data.userId !== currentUserId
+      ) {
+        setIsTyping(true);
+      }
+    },
+    [convId, conversationId, currentUserId]
+  );
+
+  const handleTypingStop = useCallback(
+    (data: any) => {
+      if (data.conversationId === convId || data.conversationId?.toString() === conversationId) {
+        setIsTyping(false);
+      }
+    },
+    [convId, conversationId]
+  );
+
+  const handleMessageRead = useCallback(
+    (data: any) => {
+      if (data.conversationId === convId || data.conversationId?.toString() === conversationId) {
+        setMessages((prev: Message[]) =>
+          prev.map((m) =>
+            m.id === data.messageId ? { ...m, read: true } : m
+          )
+        );
+      }
+    },
+    [convId, conversationId]
+  );
 
   const loadChatData = async () => {
     try {
       setLoading(true);
-      const userData = await authAPI.getUserData();
-      if (!userData) return;
-      setCurrentUserId(userData.id);
+      let userData = await authAPI.getUserData();
+      
+      if (!userData) {
+        // Try to fetch from server
+        const fetchedUser = await userAPI.whoAmI();
+        if (fetchedUser) {
+          userData = fetchedUser;
+          setCurrentUserId(fetchedUser.id);
+        } else {
+          Alert.alert("Error", "No se pudo obtener la información del usuario");
+          return;
+        }
+      } else {
+        setCurrentUserId(userData.id);
+      }
+
+      const userId = userData.id;
 
       // Load conversation details (User & Product)
       // Since we don't have getById, we find it in the list
@@ -168,7 +237,7 @@ export default function ChatConversationScreen() {
       );
 
       if (conversation) {
-        const isCurrentUserBuyer = conversation.buyerId === userData.id;
+        const isCurrentUserBuyer = conversation.buyerId === userId;
         const otherUserId = isCurrentUserBuyer
           ? conversation.sellerId
           : conversation.buyerId;
@@ -207,9 +276,11 @@ export default function ChatConversationScreen() {
         }
 
         setChatDetails({
+          vendorId: otherUserId,
           vendorName: displayName,
           vendorAvatar: avatarLetter,
           vendorImage: avatarImage,
+          isSeller: isCurrentUserBuyer, // Show rate button if current user is buyer
           product: product
             ? {
                 id: product.id,
@@ -247,11 +318,38 @@ export default function ChatConversationScreen() {
     }
   };
 
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+
+    // Send typing indicator
+    if (text.length > 0) {
+      websocketService.startTyping(convId);
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        websocketService.stopTyping(convId);
+      }, 2000);
+    } else {
+      websocketService.stopTyping(convId);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim() || sending) return;
 
     const tempId = Date.now();
     const content = inputText.trim();
+
+    // Stop typing indicator
+    websocketService.stopTyping(convId);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
 
     // Optimistic update
     const tempMessage: Message = {
@@ -295,6 +393,14 @@ export default function ChatConversationScreen() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleRateSeller = async (data: {
+    sellerId: number;
+    productId: number;
+    score: number;
+  }) => {
+    await userAPI.rateSeller(data.sellerId, data.score, data.productId);
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
@@ -343,7 +449,7 @@ export default function ChatConversationScreen() {
                     : "checkmark"
                 }
                 size={12}
-                color={palette.surface}
+                color={item.read ? "#60A5FA" : "rgba(255, 255, 255, 0.7)"}
                 style={styles.statusIcon}
               />
             )}
@@ -393,14 +499,33 @@ export default function ChatConversationScreen() {
                 </Text>
               </View>
             )}
-            <Text style={styles.userName}>{chatDetails?.vendorName}</Text>
+            <View>
+              <Text style={styles.userName}>{chatDetails?.vendorName}</Text>
+              {isTyping && (
+                <Text style={styles.typingIndicator}>escribiendo...</Text>
+              )}
+            </View>
           </View>
         </View>
+
+        {/* Rate seller button - only show if other user is the seller */}
+        {chatDetails?.isSeller && (
+          <TouchableOpacity
+            style={styles.rateButton}
+            onPress={() => setShowRatingModal(true)}
+          >
+            <Ionicons name="star" size={20} color="#FBBF24" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Product Context */}
-      {chatDetails?.product && (
-        <View style={styles.productContext}>
+      {chatDetails?.product && chatDetails.product.id !== 0 && (
+        <TouchableOpacity
+          style={styles.productContext}
+          onPress={() => router.push(`/producto/${chatDetails.product.id}`)}
+          activeOpacity={0.8}
+        >
           <View style={styles.productImageContainer}>
             {chatDetails.product.image ? (
               <Image
@@ -435,13 +560,14 @@ export default function ChatConversationScreen() {
               ${chatDetails.product.price}
             </Text>
           </View>
-        </View>
+          <Ionicons name="chevron-forward" size={18} color={palette.textMuted} />
+        </TouchableOpacity>
       )}
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        style={{ flex: 1 }}
+        style={styles.flex}
       >
         <FlatList
           ref={flatListRef}
@@ -451,16 +577,23 @@ export default function ChatConversationScreen() {
           inverted
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         />
 
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            { paddingBottom: Platform.OS === "ios" ? insets.bottom || spacing.md : spacing.md },
+          ]}
+        >
           <TextInput
             style={styles.input}
             placeholder="Escribe un mensaje..."
             placeholderTextColor={palette.textMuted}
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={handleInputChange}
             multiline
+            maxLength={1000}
           />
           <TouchableOpacity
             style={[
@@ -470,10 +603,26 @@ export default function ChatConversationScreen() {
             onPress={handleSendMessage}
             disabled={!inputText.trim() || sending}
           >
-            <Ionicons name="send" size={20} color={palette.surface} />
+            {sending ? (
+              <ActivityIndicator size="small" color={palette.surface} />
+            ) : (
+              <Ionicons name="send" size={20} color={palette.surface} />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Rating Modal */}
+      {chatDetails && (
+        <RatingSellerModal
+          visible={showRatingModal}
+          onClose={() => setShowRatingModal(false)}
+          sellerId={chatDetails.vendorId}
+          sellerName={chatDetails.vendorName}
+          productId={chatDetails.product.id}
+          onSubmit={handleRateSeller}
+        />
+      )}
     </View>
   );
 }
@@ -482,6 +631,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: palette.background,
+  },
+  flex: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -492,14 +644,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: palette.surface,
     borderBottomWidth: 1,
     borderBottomColor: palette.muted,
   },
   backButton: {
     padding: spacing.sm,
-    marginRight: spacing.sm,
+    marginRight: spacing.xs,
   },
   headerContent: {
     flex: 1,
@@ -509,9 +661,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     marginRight: spacing.sm,
   },
   avatarPlaceholder: {
@@ -660,5 +812,14 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: palette.muted,
     opacity: 0.7,
+  },
+  typingIndicator: {
+    fontSize: 12,
+    color: palette.textMuted,
+    fontStyle: "italic" as const,
+  },
+  rateButton: {
+    padding: spacing.sm,
+    marginLeft: spacing.sm,
   },
 });

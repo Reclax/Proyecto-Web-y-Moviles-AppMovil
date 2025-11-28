@@ -280,6 +280,12 @@ export const userAPI = {
     }
     return null;
   },
+
+  // Calificar a un vendedor
+  rateSeller: async (sellerId: number, score: number, productId: number) => {
+    const response = await api.post(`/users/${sellerId}/rate`, { score, productId });
+    return response.data;
+  },
 };
 
 // Funciones de productos
