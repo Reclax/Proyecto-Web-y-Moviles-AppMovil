@@ -308,10 +308,12 @@ export default function EditProductScreen() {
               {/* New Photos */}
               {newPhotos.map((photo, index) => (
                 <View key={`new-${index}`} style={styles.photoContainer}>
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={styles.photoThumbnail}
-                  />
+                  {photo.uri && (
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={styles.photoThumbnail}
+                    />
+                  )}
                   <TouchableOpacity
                     style={styles.removePhotoButton}
                     onPress={() => removeNewPhoto(index)}

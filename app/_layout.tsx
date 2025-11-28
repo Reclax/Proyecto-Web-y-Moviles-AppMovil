@@ -10,8 +10,22 @@ export default function RootLayout() {
 
   useEffect(() => {
     const initAuth = async () => {
-      await checkAuth();
-      await SplashScreen.hideAsync();
+      console.log('[RootLayout] Starting auth initialization...');
+      try {
+        // Add timeout to prevent infinite loading
+        const authPromise = checkAuth();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth check timeout')), 10000)
+        );
+        
+        await Promise.race([authPromise, timeoutPromise]);
+        console.log('[RootLayout] Auth check completed');
+      } catch (error) {
+        console.error('[RootLayout] Auth initialization error:', error);
+      } finally {
+        await SplashScreen.hideAsync();
+        console.log('[RootLayout] Splash hidden');
+      }
     };
 
     initAuth();

@@ -29,7 +29,7 @@ interface AuthStore {
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Start with true to prevent redirect before auth check
   error: null,
 
   login: async (email: string, password: string) => {
@@ -103,17 +103,22 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   checkAuth: async () => {
     try {
+      console.log('[AuthStore] checkAuth started');
       set({ isLoading: true });
+      
       const isAuth = await authAPI.isAuthenticated();
+      console.log('[AuthStore] isAuthenticated result:', isAuth);
 
       if (isAuth) {
         const userData = await authAPI.getUserData();
+        console.log('[AuthStore] userData:', userData);
         set({
           user: userData,
           isAuthenticated: true,
           isLoading: false,
         });
       } else {
+        console.log('[AuthStore] Not authenticated, redirecting to login');
         set({
           user: null,
           isAuthenticated: false,
@@ -121,6 +126,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         });
       }
     } catch (error) {
+      console.error('[AuthStore] checkAuth error:', error);
       set({
         user: null,
         isAuthenticated: false,
