@@ -74,33 +74,98 @@ export default function ChatScreen() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    setupWebSocket();
-    loadConversations();
+    initializeChat();
 
     return () => {
-      websocketService.off("newMessage", handleNewMessage);
+      cleanupWebSocket();
     };
   }, []);
 
+  const initializeChat = async () => {
+    // First load conversations (which will also verify auth)
+    await loadConversations();
+    // Then setup WebSocket after we know user is authenticated
+    await setupWebSocket();
+  };
+
   const setupWebSocket = async () => {
     try {
+      // Check if user is authenticated first
+      const token = await authAPI.getAuthToken();
       const userData = await authAPI.getUserData();
-      if (userData) {
-        setCurrentUserId(userData.id);
+      
+      if (!token || !userData) {
+        console.log('[ChatList] No authenticated user, skipping WebSocket connection');
+        return;
       }
+      
+      setCurrentUserId(userData.id);
 
       if (!websocketService.isConnectedStatus()) {
+        console.log('[ChatList] Connecting WebSocket...');
         await websocketService.connect();
       }
       setIsConnected(true);
 
+      // Setup event listeners
       websocketService.on("newMessage", handleNewMessage);
+      websocketService.on("connected", handleConnected);
+      websocketService.on("disconnected", handleDisconnected);
+      websocketService.on("userOnline", handleUserOnline);
+      websocketService.on("userOffline", handleUserOffline);
+      
+      console.log('[ChatList] WebSocket setup complete');
     } catch (error) {
-      console.error("Error connecting WebSocket:", error);
+      console.error('[ChatList] Error connecting WebSocket:', error);
+      setIsConnected(false);
     }
   };
 
+  const cleanupWebSocket = () => {
+    console.log('[ChatList] Cleaning up WebSocket listeners');
+    websocketService.off("newMessage", handleNewMessage);
+    websocketService.off("connected", handleConnected);
+    websocketService.off("disconnected", handleDisconnected);
+    websocketService.off("userOnline", handleUserOnline);
+    websocketService.off("userOffline", handleUserOffline);
+  };
+
+  const handleConnected = () => {
+    console.log('[ChatList] WebSocket connected');
+    setIsConnected(true);
+  };
+
+  const handleDisconnected = () => {
+    console.log('[ChatList] WebSocket disconnected');
+    setIsConnected(false);
+  };
+
+  const handleUserOnline = (data: any) => {
+    console.log('[ChatList] User online:', data);
+    // Update conversation list to show user online status
+    setConversations((prev: ConversationUI[]) => 
+      prev.map((conv: ConversationUI) => 
+        conv.otherUserId === data.userId 
+          ? { ...conv, online: true }
+          : conv
+      )
+    );
+  };
+
+  const handleUserOffline = (data: any) => {
+    console.log('[ChatList] User offline:', data);
+    // Update conversation list to show user offline status
+    setConversations((prev: ConversationUI[]) => 
+      prev.map((conv: ConversationUI) => 
+        conv.otherUserId === data.userId 
+          ? { ...conv, online: false }
+          : conv
+      )
+    );
+  };
+
   const handleNewMessage = (message: any) => {
+    console.log('[ChatList] New message received, reloading conversations');
     loadConversations(); // Reload to update order and preview
   };
 

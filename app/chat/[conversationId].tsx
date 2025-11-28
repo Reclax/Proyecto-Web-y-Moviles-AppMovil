@@ -57,27 +57,99 @@ export default function ChatConversationScreen() {
   const [inputText, setInputText] = useState("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const convId = parseInt(conversationId);
 
   useEffect(() => {
-    loadChatData();
-    setupWebSocket();
+    initializeChat();
 
     return () => {
-      websocketService.off("newMessage", handleNewMessage);
+      cleanupWebSocket();
     };
   }, [conversationId]);
 
+  const initializeChat = async () => {
+    // First load chat data (which verifies user is authenticated)
+    await loadChatData();
+    // Then setup WebSocket
+    await setupWebSocket();
+  };
+
   const setupWebSocket = async () => {
-    if (!websocketService.isConnectedStatus()) {
-      await websocketService.connect();
+    try {
+      // Verify authentication before connecting
+      const token = await authAPI.getAuthToken();
+      if (!token) {
+        console.log('[Chat] No auth token, skipping WebSocket connection');
+        return;
+      }
+
+      if (!websocketService.isConnectedStatus()) {
+        console.log('[Chat] Connecting WebSocket...');
+        await websocketService.connect();
+      }
+      
+      // Join the conversation
+      websocketService.joinConversation(convId);
+      
+      // Setup event listeners
+      websocketService.on("newMessage", handleNewMessage);
+      websocketService.on("messageSent", handleMessageSent);
+      websocketService.on("typingStart", handleTypingStart);
+      websocketService.on("typingStop", handleTypingStop);
+      
+      console.log('[Chat] WebSocket setup complete for conversation:', convId);
+    } catch (error) {
+      console.error('[Chat] WebSocket setup error:', error);
     }
-    websocketService.on("newMessage", handleNewMessage);
+  };
+
+  const cleanupWebSocket = () => {
+    console.log('[Chat] Cleaning up WebSocket listeners');
+    websocketService.off("newMessage", handleNewMessage);
+    websocketService.off("messageSent", handleMessageSent);
+    websocketService.off("typingStart", handleTypingStart);
+    websocketService.off("typingStop", handleTypingStop);
+    websocketService.leaveConversation(convId);
   };
 
   const handleNewMessage = (message: any) => {
-    if (message.conversationId === parseInt(conversationId)) {
-      setMessages((prev) => [message, ...prev]);
+    console.log('[Chat] New message received:', message);
+    if (message.conversationId === convId) {
+      // Check if message already exists (avoid duplicates)
+      setMessages((prev) => {
+        const exists = prev.some(m => m.id === message.id);
+        if (exists) return prev;
+        return [message, ...prev];
+      });
+    }
+  };
+
+  const handleMessageSent = (message: any) => {
+    console.log('[Chat] Message sent confirmation:', message);
+    if (message.conversationId === convId) {
+      // Update pending message with real data
+      setMessages((prev) => 
+        prev.map(m => {
+          if (m.pending && m.content === message.content) {
+            return { ...message, pending: false };
+          }
+          return m;
+        })
+      );
+    }
+  };
+
+  const handleTypingStart = (data: any) => {
+    if (data.conversationId === convId && data.userId !== currentUserId) {
+      setIsTyping(true);
+    }
+  };
+
+  const handleTypingStop = (data: any) => {
+    if (data.conversationId === convId) {
+      setIsTyping(false);
     }
   };
 

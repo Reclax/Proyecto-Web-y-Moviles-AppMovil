@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authAPI } from '@/services/api';
+import { authAPI, userAPI } from '@/services/api';
 
 interface User {
   id: number;
@@ -110,13 +110,43 @@ export const useAuthStore = create<AuthStore>((set) => ({
       console.log('[AuthStore] isAuthenticated result:', isAuth);
 
       if (isAuth) {
-        const userData = await authAPI.getUserData();
-        console.log('[AuthStore] userData:', userData);
-        set({
-          user: userData,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        let userData = await authAPI.getUserData();
+        console.log('[AuthStore] userData from storage:', userData);
+        
+        // If userData is null but we have a token, fetch from server
+        if (!userData) {
+          console.log('[AuthStore] No userData in storage, fetching from server...');
+          try {
+            userData = await userAPI.whoAmI();
+            console.log('[AuthStore] userData from server:', userData);
+            // Save to storage for next time
+            if (userData) {
+              const token = await authAPI.getAuthToken();
+              if (token) {
+                await authAPI.saveAuthData(token, userData);
+              }
+            }
+          } catch (error) {
+            console.error('[AuthStore] Error fetching user data from server:', error);
+          }
+        }
+        
+        if (userData) {
+          set({
+            user: userData,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } else {
+          // No user data available, clear auth
+          console.log('[AuthStore] No user data available, clearing auth');
+          await authAPI.logout();
+          set({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
       } else {
         console.log('[AuthStore] Not authenticated, redirecting to login');
         set({

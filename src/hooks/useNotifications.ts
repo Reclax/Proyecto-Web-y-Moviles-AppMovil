@@ -130,17 +130,18 @@ export const useNotifications = () => {
 
   useEffect(() => {
     const handleNewMessage = (payload: any) => {
+      console.log('[useNotifications] New message received:', payload);
       if (
         payload.senderId &&
         payload.senderId !== websocketService.currentUserId
       ) {
         const notificationPayload = {
           id: `msg_${payload.id}_${Date.now()}`,
-          title: "New message",
-          message: "You have a new message",
+          title: "Nuevo mensaje",
+          message: payload.content?.substring(0, 50) || "Tienes un nuevo mensaje",
           typeId: 1,
           userId: websocketService.currentUserId,
-          conversationId: payload.conversationId, // Add conversationId
+          conversationId: payload.conversationId,
           createdAt:
             payload.sentAt || payload.createdAt || new Date().toISOString(),
         };
@@ -148,10 +149,28 @@ export const useNotifications = () => {
       }
     };
 
+    const handleNewNotification = (payload: any) => {
+      console.log('[useNotifications] New notification from WebSocket:', payload);
+      addNotification(payload);
+    };
+
+    const handleNotificationReadConfirm = (data: any) => {
+      console.log('[useNotifications] Notification read confirmed:', data);
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === data.notificationId ? { ...notif, read: true } : notif
+        )
+      );
+    };
+
     websocketService.on("newMessage", handleNewMessage);
+    websocketService.on("newNotification", handleNewNotification);
+    websocketService.on("notificationReadConfirm", handleNotificationReadConfirm);
 
     return () => {
       websocketService.off("newMessage", handleNewMessage);
+      websocketService.off("newNotification", handleNewNotification);
+      websocketService.off("notificationReadConfirm", handleNotificationReadConfirm);
     };
   }, [addNotification]);
 
