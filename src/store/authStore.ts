@@ -106,49 +106,74 @@ export const useAuthStore = create<AuthStore>((set) => ({
       console.log('[AuthStore] checkAuth started');
       set({ isLoading: true });
       
-      const isAuth = await authAPI.isAuthenticated();
-      console.log('[AuthStore] isAuthenticated result:', isAuth);
+      const token = await authAPI.getAuthToken();
+      console.log('[AuthStore] has token:', !!token);
 
-      if (isAuth) {
-        let userData = await authAPI.getUserData();
-        console.log('[AuthStore] userData from storage:', userData);
+      if (!token) {
+        console.log('[AuthStore] No token, not authenticated');
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+        return;
+      }
+
+      // First, try to use cached data to show UI quickly
+      const cachedUserData = await authAPI.getUserData();
+      if (cachedUserData) {
+        console.log('[AuthStore] Using cached userData for quick load');
+        set({
+          user: cachedUserData,
+          isAuthenticated: true,
+          isLoading: false,
+        });
         
-        // If userData is null but we have a token, fetch from server
-        if (!userData) {
-          console.log('[AuthStore] No userData in storage, fetching from server...');
+        // Then validate token in background (don't block UI)
+        setTimeout(async () => {
           try {
-            userData = await userAPI.whoAmI();
-            console.log('[AuthStore] userData from server:', userData);
-            // Save to storage for next time
+            console.log('[AuthStore] Background token validation...');
+            const userData = await userAPI.whoAmI();
             if (userData) {
-              const token = await authAPI.getAuthToken();
-              if (token) {
-                await authAPI.saveAuthData(token, userData);
-              }
+              console.log('[AuthStore] Token valid, updating user data');
+              await authAPI.saveAuthData(token, userData);
+              set({ user: userData });
             }
-          } catch (error) {
-            console.error('[AuthStore] Error fetching user data from server:', error);
+          } catch (error: any) {
+            console.log('[AuthStore] Background validation failed:', error?.message);
+            // If 401, token expired - logout
+            if (error?.response?.status === 401) {
+              console.log('[AuthStore] Token expired, logging out');
+              await authAPI.logout();
+              set({ user: null, isAuthenticated: false });
+            }
           }
-        }
+        }, 100);
+        return;
+      }
+
+      // No cached data, must validate with server
+      console.log('[AuthStore] No cached data, validating with server...');
+      try {
+        const userData = await userAPI.whoAmI();
+        console.log('[AuthStore] Token valid, userData from server:', userData?.id);
         
         if (userData) {
+          await authAPI.saveAuthData(token, userData);
           set({
             user: userData,
             isAuthenticated: true,
             isLoading: false,
           });
         } else {
-          // No user data available, clear auth
-          console.log('[AuthStore] No user data available, clearing auth');
-          await authAPI.logout();
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+          throw new Error('No user data returned');
         }
-      } else {
-        console.log('[AuthStore] Not authenticated, redirecting to login');
+      } catch (serverError: any) {
+        console.error('[AuthStore] Token validation failed:', serverError?.message);
+        
+        // Token invalid or network error - clear auth
+        console.log('[AuthStore] Clearing auth data');
+        await authAPI.logout();
         set({
           user: null,
           isAuthenticated: false,

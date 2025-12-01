@@ -106,12 +106,14 @@ api.interceptors.request.use(
 );
 
 // Interceptor para manejar respuestas
+// Note: We don't auto-clear tokens on 401 here to avoid race conditions
+// The authStore.checkAuth handles token validation and cleanup
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // Log 401 errors but don't auto-clear - let authStore handle it
     if (error.response?.status === 401) {
-      await secureStorage.removeAuthToken();
-      await secureStorage.removeUserData();
+      console.log('[API] 401 Unauthorized for:', error.config?.url);
     }
     return Promise.reject(error);
   }

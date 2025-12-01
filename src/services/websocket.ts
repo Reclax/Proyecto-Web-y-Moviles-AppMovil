@@ -162,17 +162,21 @@ class WebSocketService {
   private handleMessage(event: any): void {
     try {
       const message = JSON.parse(event.data);
+      console.log('[WebSocket] Received message type:', message.type, 'data:', JSON.stringify(message).substring(0, 200));
 
       switch (message.type) {
         case 'init:data':
+          console.log('[WebSocket] Init data received');
           this.emit('init', message.data);
           break;
         case 'chat:new':
+          console.log('[WebSocket] New chat message received:', message.data?.message?.id);
           if (message.data && message.data.message) {
             this.emit('newMessage', message.data.message);
           }
           break;
         case 'chat:sent':
+          console.log('[WebSocket] Chat sent confirmation:', message.data?.message?.id);
           if (message.data && message.data.message) {
             this.emit('messageSent', message.data.message);
           }
@@ -222,11 +226,12 @@ class WebSocketService {
 
   send(message: any): boolean {
     if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('[WebSocket] Sending message:', message.type);
+      console.log('[WebSocket] Sending message:', message.type, 'connected:', this.isConnected, 'readyState:', this.ws.readyState);
       this.ws.send(JSON.stringify(message));
       return true;
     } else {
-      console.log('[WebSocket] Queuing message (not connected):', message.type);
+      console.log('[WebSocket] Cannot send - connected:', this.isConnected, 'ws:', !!this.ws, 'readyState:', this.ws?.readyState);
+      console.log('[WebSocket] Queuing message:', message.type);
       this.messageQueue.push(message);
       return false;
     }

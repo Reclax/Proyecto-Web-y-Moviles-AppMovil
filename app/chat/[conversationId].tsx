@@ -6,6 +6,7 @@ import {
   userAPI,
 } from "@/services/api";
 import websocketService from "@/services/websocket";
+import { useActiveChatStore } from "@/store/activeChatStore";
 import { palette, radius, shadows, spacing, typography } from "@/theme";
 import { getAbsoluteUrl } from "@/utils/productUtils";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,6 +55,7 @@ export default function ChatConversationScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const setActiveConversation = useActiveChatStore((state) => state.setActiveConversation);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -63,13 +65,16 @@ export default function ChatConversationScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const convId = parseInt(conversationId);
 
   useEffect(() => {
+    // Set active conversation for push notification filtering
+    setActiveConversation(convId);
     initializeChat();
 
     return () => {
+      setActiveConversation(null);
       cleanupWebSocket();
     };
   }, [conversationId]);
@@ -77,28 +82,31 @@ export default function ChatConversationScreen() {
   const initializeChat = async () => {
     // First load chat data (which verifies user is authenticated)
     await loadChatData();
-    // Then setup WebSocket
+    // Then setup WebSocket listeners (connection is managed globally in _layout)
     await setupWebSocket();
   };
 
   const setupWebSocket = async () => {
     try {
-      // Verify authentication before connecting
+      // Verify authentication before setting up listeners
       const token = await authAPI.getAuthToken();
       if (!token) {
-        console.log('[Chat] No auth token, skipping WebSocket connection');
+        console.log('[Chat] No auth token, skipping WebSocket setup');
         return;
       }
 
+      // WebSocket connection is managed globally in _layout.tsx
+      // Here we just ensure it's connected and join the conversation
       if (!websocketService.isConnectedStatus()) {
-        console.log('[Chat] Connecting WebSocket...');
+        console.log('[Chat] WebSocket not connected, attempting to connect...');
         await websocketService.connect();
       }
       
-      // Join the conversation
+      // Join the conversation room
+      console.log('[Chat] Joining conversation:', convId);
       websocketService.joinConversation(convId);
       
-      // Setup event listeners
+      // Setup event listeners for this chat screen
       websocketService.on("newMessage", handleNewMessage);
       websocketService.on("messageSent", handleMessageSent);
       websocketService.on("typingStart", handleTypingStart);
