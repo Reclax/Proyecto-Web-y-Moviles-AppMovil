@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authAPI, userAPI } from '@/services/api';
+import { authAPI, userAPI, setLogoutHandler } from '@/services/api';
 
 interface User {
   id: number;
@@ -190,3 +190,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
     }
   },
 }));
+
+// Configurar el handler de logout para el interceptor del API
+// Esto se ejecuta cuando el API detecta un 401
+setLogoutHandler(() => {
+  console.log('[AuthStore] Logout triggered by API interceptor (401)');
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+  });
+});

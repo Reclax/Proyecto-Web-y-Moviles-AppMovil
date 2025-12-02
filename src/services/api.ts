@@ -105,16 +105,43 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Flag para evitar múltiples logouts simultáneos
+let isLoggingOut = false;
+
+// Función para hacer logout desde el interceptor (se inyectará desde authStore)
+let logoutHandler: (() => void) | null = null;
+
+export const setLogoutHandler = (handler: () => void) => {
+  logoutHandler = handler;
+};
+
 // Interceptor para manejar respuestas
-// Note: We don't auto-clear tokens on 401 here to avoid race conditions
-// The authStore.checkAuth handles token validation and cleanup
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Log 401 errors but don't auto-clear - let authStore handle it
-    if (error.response?.status === 401) {
-      console.log('[API] 401 Unauthorized for:', error.config?.url);
+    // Manejar errores 401 - limpiar auth y redirigir a login
+    if (error.response?.status === 401 && !isLoggingOut) {
+      console.log('[API] 401 Unauthorized - Limpiando sesión y redirigiendo a login');
+      isLoggingOut = true;
+      
+      // Limpiar tokens del storage
+      await secureStorage.removeAuthToken();
+      await secureStorage.removeUserData();
+      
+      // Llamar al handler de logout si está configurado
+      if (logoutHandler) {
+        logoutHandler();
+      }
+      
+      // Reset flag después de un delay para permitir nuevos intentos
+      setTimeout(() => {
+        isLoggingOut = false;
+      }, 1000);
+      
+      // Retornar un error más limpio
+      return Promise.reject(new Error('Sesión expirada. Por favor, inicia sesión nuevamente.'));
     }
+    
     return Promise.reject(error);
   }
 );
