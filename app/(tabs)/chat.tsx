@@ -135,6 +135,7 @@ export default function ChatScreen() {
       websocketService.on("disconnected", handleDisconnected);
       websocketService.on("userOnline", handleUserOnline);
       websocketService.on("userOffline", handleUserOffline);
+      websocketService.on("messageReadUpdate", handleMessageReadUpdate);
       
       console.log('[ChatList] WebSocket setup complete');
     } catch (error) {
@@ -150,6 +151,7 @@ export default function ChatScreen() {
     websocketService.off("disconnected", handleDisconnected);
     websocketService.off("userOnline", handleUserOnline);
     websocketService.off("userOffline", handleUserOffline);
+    websocketService.off("messageReadUpdate", handleMessageReadUpdate);
   };
 
   const handleConnected = () => {
@@ -184,6 +186,13 @@ export default function ChatScreen() {
           : conv
       )
     );
+  };
+
+  // Handler for when messages are marked as read
+  const handleMessageReadUpdate = (data: any) => {
+    console.log('[ChatList] Message read update:', data);
+    // When another user reads our messages, we might want to update UI
+    // But for now, this is mainly used to reduce unread count when we read messages
   };
 
   const handleNewMessage = (message: any) => {
@@ -359,10 +368,22 @@ export default function ChatScreen() {
       conv.product.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Handle conversation selection - reset unread count and navigate
+  const handleConversationPress = (item: ConversationUI) => {
+    // Reset unread count for this conversation
+    setConversations((prev: ConversationUI[]) =>
+      prev.map((conv: ConversationUI) =>
+        conv.id === item.id ? { ...conv, unread: 0 } : conv
+      )
+    );
+    // Navigate to the conversation
+    router.push(`/chat/${item.id}`);
+  };
+
   const renderConversationItem = ({ item }: { item: ConversationUI }) => (
     <TouchableOpacity
       style={styles.conversationItem}
-      onPress={() => router.push(`/chat/${item.id}`)}
+      onPress={() => handleConversationPress(item)}
     >
       <View style={styles.avatarContainer}>
         {item.vendorImage ? (

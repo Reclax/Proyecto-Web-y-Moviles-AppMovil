@@ -355,6 +355,19 @@ export default function ChatConversationScreen() {
         console.log('[Chat] Sample mapped message:', JSON.stringify(mappedMsgs[0]));
       }
       setMessages(mappedMsgs);
+
+      // Mark unread messages from other user as read
+      const unreadMessages = mappedMsgs.filter(
+        (msg) => Number(msg.senderId) !== userId && !msg.read
+      );
+      
+      if (unreadMessages.length > 0) {
+        console.log('[Chat] Marking', unreadMessages.length, 'messages as read');
+        // Mark each unread message as read via WebSocket
+        unreadMessages.forEach((msg) => {
+          websocketService.markMessageAsRead(msg.id);
+        });
+      }
     } catch (error) {
       console.error("Error loading chat:", error);
       Alert.alert("Error", "No se pudo cargar la conversación");
