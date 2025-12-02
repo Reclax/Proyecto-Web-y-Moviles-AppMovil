@@ -28,11 +28,41 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import RatingSellerModal from "@/components/RatingSellerModal";
 
+// Helper function to format message time - handles both createdAt and sentAt
+const formatMessageTime = (message: Message): string => {
+  const dateString = message.createdAt || message.sentAt;
+  
+  if (!dateString) {
+    console.log('[formatMessageTime] No date found for message:', message.id);
+    return "";
+  }
+  
+  try {
+    const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.log('[formatMessageTime] Invalid date:', dateString);
+      return "";
+    }
+    
+    return date.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } catch (e) {
+    console.log('[formatMessageTime] Error parsing date:', e);
+    return "";
+  }
+};
+
 interface Message {
   id: number;
   content: string;
   senderId: number;
-  createdAt: string;
+  createdAt?: string;
+  sentAt?: string;
   read: boolean;
   pending?: boolean;
 }
@@ -62,114 +92,66 @@ export default function ChatConversationScreen() {
   const [inputText, setInputText] = useState("");
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [chatDetails, setChatDetails] = useState<ChatDetails | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const convId = parseInt(conversationId);
 
-  useEffect(() => {
-    // Set active conversation for push notification filtering
-    setActiveConversation(convId);
-    initializeChat();
-
-    return () => {
-      setActiveConversation(null);
-      cleanupWebSocket();
-    };
-  }, [conversationId]);
-
-  const initializeChat = async () => {
-    // First load chat data (which verifies user is authenticated)
-    await loadChatData();
-    // Then setup WebSocket listeners (connection is managed globally in _layout)
-    await setupWebSocket();
-  };
-
-  const setupWebSocket = async () => {
-    try {
-      // Verify authentication before setting up listeners
-      const token = await authAPI.getAuthToken();
-      if (!token) {
-        console.log('[Chat] No auth token, skipping WebSocket setup');
-        return;
-      }
-
-      // WebSocket connection is managed globally in _layout.tsx
-      // Here we just ensure it's connected and join the conversation
-      if (!websocketService.isConnectedStatus()) {
-        console.log('[Chat] WebSocket not connected, attempting to connect...');
-        await websocketService.connect();
-      }
-      
-      // Join the conversation room
-      console.log('[Chat] Joining conversation:', convId);
-      websocketService.joinConversation(convId);
-      
-      // Setup event listeners for this chat screen
-      websocketService.on("newMessage", handleNewMessage);
-      websocketService.on("messageSent", handleMessageSent);
-      websocketService.on("typingStart", handleTypingStart);
-      websocketService.on("typingStop", handleTypingStop);
-      websocketService.on("messageReadUpdate", handleMessageRead);
-      
-      console.log('[Chat] WebSocket setup complete for conversation:', convId);
-    } catch (error) {
-      console.error('[Chat] WebSocket setup error:', error);
-    }
-  };
-
-  const cleanupWebSocket = () => {
-    console.log('[Chat] Cleaning up WebSocket listeners');
-    websocketService.off("newMessage", handleNewMessage);
-    websocketService.off("messageSent", handleMessageSent);
-    websocketService.off("typingStart", handleTypingStart);
-    websocketService.off("typingStop", handleTypingStop);
-    websocketService.off("messageReadUpdate", handleMessageRead);
-    websocketService.leaveConversation(convId);
-  };
-
+  // Define callbacks FIRST before useEffect
   const handleNewMessage = useCallback(
     (message: any) => {
       console.log("[Chat] New message received:", message);
-      if (message.conversationId === convId || message.conversationId?.toString() === conversationId) {
+      console.log("[Chat] Comparing conversationId:", message.conversationId, "with convId:", convId, "type:", typeof message.conversationId);
+      
+      // Compare as numbers to handle both string and number types
+      const msgConvId = Number(message.conversationId);
+      if (msgConvId === convId) {
         setMessages((prev: Message[]) => {
-          const exists = prev.some((m) => m.id === message.id);
-          if (exists) return prev;
+          const exists = prev.some((m) => m.id === message.id || Number(m.id) === Number(message.id));
+          if (exists) {
+            console.log("[Chat] Message already exists, skipping");
+            return prev;
+          }
 
           const newMessage: Message = {
             id: message.id,
             content: message.content,
-            senderId: message.senderId,
+            senderId: Number(message.senderId),
             createdAt: message.createdAt || message.sentAt || new Date().toISOString(),
+            sentAt: message.sentAt,
             read: message.read || false,
             pending: false,
           };
 
+          console.log("[Chat] Adding new message:", newMessage.id, "date:", newMessage.createdAt || newMessage.sentAt);
           return [newMessage, ...prev];
         });
 
         // Mark as read if from other user
-        if (message.senderId !== currentUserId) {
+        if (Number(message.senderId) !== currentUserId) {
           websocketService.markMessageAsRead(message.id);
         }
+      } else {
+        console.log("[Chat] Message is for different conversation, ignoring");
       }
     },
-    [convId, conversationId, currentUserId]
+    [convId, currentUserId]
   );
 
   const handleMessageSent = useCallback(
     (message: any) => {
       console.log("[Chat] Message sent confirmation:", message);
-      if (message.conversationId === convId || message.conversationId?.toString() === conversationId) {
+      const msgConvId = Number(message.conversationId);
+      if (msgConvId === convId) {
         setMessages((prev: Message[]) =>
           prev.map((m) => {
             if (m.pending && m.content === message.content) {
+              console.log("[Chat] Updating pending message with confirmed ID:", message.id);
               return {
                 id: message.id,
                 content: message.content,
-                senderId: message.senderId,
+                senderId: Number(message.senderId),
                 createdAt: message.createdAt || message.sentAt || m.createdAt,
+                sentAt: message.sentAt,
                 read: message.read || false,
                 pending: false,
               };
@@ -179,42 +161,74 @@ export default function ChatConversationScreen() {
         );
       }
     },
-    [convId, conversationId]
-  );
-
-  const handleTypingStart = useCallback(
-    (data: any) => {
-      if (
-        (data.conversationId === convId || data.conversationId?.toString() === conversationId) &&
-        data.userId !== currentUserId
-      ) {
-        setIsTyping(true);
-      }
-    },
-    [convId, conversationId, currentUserId]
-  );
-
-  const handleTypingStop = useCallback(
-    (data: any) => {
-      if (data.conversationId === convId || data.conversationId?.toString() === conversationId) {
-        setIsTyping(false);
-      }
-    },
-    [convId, conversationId]
+    [convId]
   );
 
   const handleMessageRead = useCallback(
     (data: any) => {
-      if (data.conversationId === convId || data.conversationId?.toString() === conversationId) {
+      const dataConvId = Number(data.conversationId);
+      if (dataConvId === convId) {
         setMessages((prev: Message[]) =>
           prev.map((m) =>
-            m.id === data.messageId ? { ...m, read: true } : m
+            m.id === data.messageId || Number(m.id) === Number(data.messageId) 
+              ? { ...m, read: true } 
+              : m
           )
         );
       }
     },
-    [convId, conversationId]
+    [convId]
   );
+
+  // Load chat data effect
+  useEffect(() => {
+    setActiveConversation(convId);
+    loadChatData();
+
+    return () => {
+      setActiveConversation(null);
+    };
+  }, [conversationId, convId]);
+
+  // WebSocket setup effect - runs after currentUserId is set
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const setupWebSocketConnection = async () => {
+      try {
+        const token = await authAPI.getAuthToken();
+        if (!token) {
+          console.log('[Chat] No auth token, skipping WebSocket setup');
+          return;
+        }
+
+        if (!websocketService.isConnectedStatus()) {
+          console.log('[Chat] WebSocket not connected, attempting to connect...');
+          await websocketService.connect();
+        }
+
+        console.log('[Chat] WebSocket ready for conversation:', convId);
+      } catch (error) {
+        console.error('[Chat] WebSocket setup error:', error);
+      }
+    };
+
+    setupWebSocketConnection();
+
+    // Register event listeners
+    websocketService.on("newMessage", handleNewMessage);
+    websocketService.on("messageSent", handleMessageSent);
+    websocketService.on("messageReadUpdate", handleMessageRead);
+
+    console.log('[Chat] WebSocket listeners registered for user:', currentUserId);
+
+    return () => {
+      console.log('[Chat] Cleaning up WebSocket listeners');
+      websocketService.off("newMessage", handleNewMessage);
+      websocketService.off("messageSent", handleMessageSent);
+      websocketService.off("messageReadUpdate", handleMessageRead);
+    };
+  }, [currentUserId, convId, handleNewMessage, handleMessageSent, handleMessageRead]);
 
   const loadChatData = async () => {
     try {
@@ -308,16 +322,39 @@ export default function ChatConversationScreen() {
       }
 
       // Load Messages
-      const msgs = await conversationAPI.getConversationMessages(
+      const rawMsgs = await conversationAPI.getConversationMessages(
         parseInt(conversationId)
       );
+      
+      console.log('[Chat] Raw messages from API:', rawMsgs.length);
+      if (rawMsgs.length > 0) {
+        console.log('[Chat] Sample raw message:', JSON.stringify(rawMsgs[0]));
+      }
+      console.log('[Chat] Current user ID:', userId, 'type:', typeof userId);
+      
+      // Map messages to ensure consistent format and normalize date fields
+      const mappedMsgs: Message[] = rawMsgs.map((msg: any) => ({
+        id: msg.id,
+        content: msg.content,
+        senderId: Number(msg.senderId),
+        createdAt: msg.createdAt || msg.sentAt,
+        sentAt: msg.sentAt,
+        read: msg.read || false,
+        pending: false,
+      }));
+      
       // Sort by date descending for inverted list
-      msgs.sort(
-        (a: any, b: any) =>
-          new Date(b.createdAt || b.sentAt).getTime() -
-          new Date(a.createdAt || a.sentAt).getTime()
-      );
-      setMessages(msgs);
+      mappedMsgs.sort(
+        (a: Message, b: Message) =>
+          new Date(a.createdAt || a.sentAt || 0).getTime() -
+          new Date(b.createdAt || b.sentAt || 0).getTime()
+      ).reverse();
+      
+      console.log('[Chat] Loaded messages:', mappedMsgs.length);
+      if (mappedMsgs.length > 0) {
+        console.log('[Chat] Sample mapped message:', JSON.stringify(mappedMsgs[0]));
+      }
+      setMessages(mappedMsgs);
     } catch (error) {
       console.error("Error loading chat:", error);
       Alert.alert("Error", "No se pudo cargar la conversación");
@@ -328,23 +365,7 @@ export default function ChatConversationScreen() {
 
   const handleInputChange = (text: string) => {
     setInputText(text);
-
-    // Send typing indicator
-    if (text.length > 0) {
-      websocketService.startTyping(convId);
-
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Stop typing after 2 seconds of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        websocketService.stopTyping(convId);
-      }, 2000);
-    } else {
-      websocketService.stopTyping(convId);
-    }
+    // Typing indicator disabled - backend doesn't support it
   };
 
   const handleSendMessage = async () => {
@@ -352,12 +373,6 @@ export default function ChatConversationScreen() {
 
     const tempId = Date.now();
     const content = inputText.trim();
-
-    // Stop typing indicator
-    websocketService.stopTyping(convId);
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
 
     // Optimistic update
     const tempMessage: Message = {
@@ -412,7 +427,13 @@ export default function ChatConversationScreen() {
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    const isOwn = item.senderId === currentUserId;
+    // Convert both to numbers for safe comparison
+    const messageSenderId = Number(item.senderId);
+    const myUserId = Number(currentUserId);
+    const isOwn = messageSenderId === myUserId;
+    
+    // Debug log
+    console.log('[renderMessage] Message ID:', item.id, 'senderId:', messageSenderId, 'currentUserId:', myUserId, 'isOwn:', isOwn);
 
     return (
       <View
@@ -442,10 +463,7 @@ export default function ChatConversationScreen() {
                 isOwn ? styles.timeOwn : styles.timeOther,
               ]}
             >
-              {new Date(item.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {formatMessageTime(item)}
             </Text>
             {isOwn && (
               <Ionicons
@@ -509,9 +527,6 @@ export default function ChatConversationScreen() {
             )}
             <View>
               <Text style={styles.userName}>{chatDetails?.vendorName}</Text>
-              {isTyping && (
-                <Text style={styles.typingIndicator}>escribiendo...</Text>
-              )}
             </View>
           </View>
         </View>
@@ -820,11 +835,6 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: palette.muted,
     opacity: 0.7,
-  },
-  typingIndicator: {
-    fontSize: 12,
-    color: palette.textMuted,
-    fontStyle: "italic" as const,
   },
   rateButton: {
     padding: spacing.sm,

@@ -399,6 +399,7 @@ class WebSocketService {
       this.eventListeners.set(event, []);
     }
     this.eventListeners.get(event)!.push(callback);
+    console.log(`[WebSocket] Listener added for event: ${event}, total listeners: ${this.eventListeners.get(event)!.length}`);
   }
 
   off(event: string, callback: Function): void {
@@ -407,15 +408,18 @@ class WebSocketService {
       const index = listeners.indexOf(callback);
       if (index > -1) {
         listeners.splice(index, 1);
+        console.log(`[WebSocket] Listener removed for event: ${event}, remaining: ${listeners.length}`);
       }
     }
   }
 
   emit(event: string, data?: any): void {
     const listeners = this.eventListeners.get(event);
-    if (listeners) {
-      listeners.forEach((callback) => {
+    console.log(`[WebSocket] Emitting event: ${event}, listeners count: ${listeners?.length || 0}`);
+    if (listeners && listeners.length > 0) {
+      listeners.forEach((callback, index) => {
         try {
+          console.log(`[WebSocket] Calling listener ${index + 1} for event: ${event}`);
           callback(data);
         } catch (error) {
           console.error('Error in listener:', error);
