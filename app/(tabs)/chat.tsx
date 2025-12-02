@@ -35,6 +35,7 @@ interface ConversationUI {
   };
   lastMessage: string;
   lastMessageTime: string;
+  lastMessageDate: string | null; // Raw date for sorting
   unread: number;
   originalData: any;
 }
@@ -186,8 +187,34 @@ export default function ChatScreen() {
   };
 
   const handleNewMessage = (message: any) => {
-    console.log('[ChatList] New message received, reloading conversations');
-    loadConversations(); // Reload to update order and preview
+    console.log('[ChatList] New message received:', message);
+    
+    // Update the conversation in the list and move it to the top
+    setConversations((prev: ConversationUI[]) => {
+      const convId = Number(message.conversationId);
+      const existingIndex = prev.findIndex((c) => c.id === convId);
+      
+      if (existingIndex === -1) {
+        // New conversation, reload all
+        loadConversations();
+        return prev;
+      }
+      
+      // Update the existing conversation
+      const updatedConv = {
+        ...prev[existingIndex],
+        lastMessage: message.content,
+        lastMessageTime: formatMessageTime(message.createdAt || message.sentAt || new Date().toISOString()),
+        lastMessageDate: message.createdAt || message.sentAt || new Date().toISOString(),
+        unread: message.senderId !== currentUserId 
+          ? prev[existingIndex].unread + 1 
+          : prev[existingIndex].unread,
+      };
+      
+      // Remove from current position and add to top
+      const newConversations = prev.filter((c) => c.id !== convId);
+      return [updatedConv, ...newConversations];
+    });
   };
 
   const loadConversations = async () => {
@@ -296,16 +323,20 @@ export default function ChatScreen() {
             lastMessageTime: lastMessage
               ? formatMessageTime(lastMessage.createdAt || lastMessage.sentAt)
               : "",
+            lastMessageDate: lastMessage 
+              ? (lastMessage.createdAt || lastMessage.sentAt || null)
+              : null,
             unread: unreadCount,
             originalData: conversation,
           };
         })
       );
 
-      // Sort by last message time (descending)
+      // Sort by last message time (descending - most recent first)
       mappedConversations.sort((a: ConversationUI, b: ConversationUI) => {
-        // Simple sort, ideally parse dates
-        return 0;
+        const dateA = a.lastMessageDate ? new Date(a.lastMessageDate).getTime() : 0;
+        const dateB = b.lastMessageDate ? new Date(b.lastMessageDate).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
       });
 
       setConversations(mappedConversations);
