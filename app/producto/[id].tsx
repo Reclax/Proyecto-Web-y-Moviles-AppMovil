@@ -8,7 +8,7 @@ import {
   userAPI,
 } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
-import { palette, radius, shadows, spacing, typography } from "@/theme";
+import { palette, radius, shadows, spacing } from "@/theme";
 import {
   formatCurrency,
   getAbsoluteUrl,
@@ -170,9 +170,16 @@ export default function ProductDetailScreen() {
   const handleShare = async () => {
     if (!product) return;
     try {
+      // URL de la web para compartir el producto
+      const webUrl = process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:5173";
+      const productUrl = `${webUrl}/producto/${product.id}`;
+
       await Share.share({
         title: product.title,
-        message: `${product.title} - ${formatCurrency(product.price)}`,
+        message: `¡Mira este producto!\n\n${product.title}\n${formatCurrency(
+          product.price
+        )}\n\n${productUrl}`,
+        url: productUrl, // iOS usa esto para compartir links
       });
     } catch (err) {
       console.warn("No se pudo compartir", err);
@@ -219,7 +226,7 @@ export default function ProductDetailScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* Gallery Section */}
+        {/* Hero Gallery Section */}
         <View style={styles.galleryWrapper}>
           <ScrollView
             horizontal
@@ -244,206 +251,246 @@ export default function ProductDetailScreen() {
                     }
                   />
                 ) : (
-                  <View style={styles.galleryPlaceholder}>
-                    <Ionicons name="cube" size={64} color={palette.primary} />
-                  </View>
+                  <LinearGradient
+                    colors={["#FFF5F0", "#FEECD7"]}
+                    style={styles.galleryPlaceholder}
+                  >
+                    <View style={styles.placeholderIconContainer}>
+                      <Ionicons
+                        name="cube-outline"
+                        size={80}
+                        color={palette.primary}
+                      />
+                    </View>
+                  </LinearGradient>
                 )}
               </View>
             ))}
           </ScrollView>
 
-          {/* Gradient Overlay */}
+          {/* Top Gradient Overlay */}
           <LinearGradient
-            colors={["rgba(0,0,0,0.4)", "transparent", "transparent"]}
-            style={[styles.headerGradient, { height: insets.top + 60 }]}
+            colors={["rgba(0,0,0,0.5)", "rgba(0,0,0,0.2)", "transparent"]}
+            style={[styles.headerGradient, { height: insets.top + 80 }]}
           />
 
-          {/* Header Actions */}
-          <View style={[styles.headerOverlay, { paddingTop: insets.top }]}>
+          {/* Bottom Gradient for smooth transition */}
+          <LinearGradient
+            colors={[
+              "transparent",
+              "rgba(238,229,233,0.3)",
+              palette.background,
+            ]}
+            style={styles.bottomGradient}
+          />
+
+          {/* Header Actions - Floating Pills Style */}
+          <View
+            style={[
+              styles.headerOverlay,
+              { paddingTop: insets.top + spacing.sm },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.iconButton}
+              style={styles.backButtonPill}
               onPress={() => router.back()}
+              activeOpacity={0.8}
             >
-              <Ionicons name="arrow-back" size={24} color={palette.text} />
+              <Ionicons name="chevron-back" size={22} color={palette.text} />
             </TouchableOpacity>
+
             <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
-                <Ionicons name="share-outline" size={22} color={palette.text} />
+              <TouchableOpacity
+                style={styles.actionPill}
+                onPress={handleShare}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="share-outline" size={20} color={palette.text} />
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.iconButton}
+                style={[
+                  styles.actionPill,
+                  isFavorite && styles.actionPillActive,
+                ]}
                 onPress={handleToggleFavorite}
+                activeOpacity={0.8}
               >
                 <Ionicons
                   name={isFavorite ? "heart" : "heart-outline"}
-                  size={22}
-                  color={isFavorite ? palette.danger : palette.text}
+                  size={20}
+                  color={isFavorite ? palette.surface : palette.text}
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Image Indicator */}
+          {/* Modern Dot Indicators */}
           {gallery.length > 1 && (
-            <View style={styles.galleryIndicator}>
-              <Text style={styles.galleryIndicatorText}>
-                {activeImage + 1}/{gallery.length}
-              </Text>
+            <View style={styles.dotsContainer}>
+              {gallery.map((_: string | null, idx: number) => (
+                <View
+                  key={idx}
+                  style={[styles.dot, activeImage === idx && styles.dotActive]}
+                />
+              ))}
             </View>
           )}
         </View>
 
         {/* Content Section */}
         <View style={styles.contentContainer}>
-          <View style={styles.dragHandle} />
-
-          <View style={styles.mainInfo}>
-            <View style={styles.categoryRow}>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{categoryLabel}</Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor:
-                      STATUS_COLORS[product?.status || "active"] ||
-                      STATUS_COLORS.active,
-                  },
-                ]}
-              >
-                <Text style={styles.statusText}>{statusLabel}</Text>
-              </View>
+          {/* Category & Status */}
+          <View style={styles.tagsRow}>
+            <View style={styles.categoryTag}>
+              <Text style={styles.categoryTagText}>{categoryLabel}</Text>
             </View>
-
-            <Text style={styles.title}>{product.title}</Text>
-            <Text style={styles.price}>{formatCurrency(product.price)}</Text>
-
-            <View style={styles.locationRow}>
-              <Ionicons
-                name="location-outline"
-                size={18}
-                color={palette.textMuted}
-              />
-              <Text style={styles.locationText}>
-                {product.location || "Ubicación no especificada"}
-              </Text>
+            <View
+              style={[
+                styles.statusTag,
+                { backgroundColor: STATUS_COLORS[product?.status || "active"] },
+              ]}
+            >
+              <Text style={styles.statusTagText}>{statusLabel}</Text>
             </View>
           </View>
 
+          {/* Title */}
+          <Text style={styles.productTitle}>{product.title}</Text>
+
+          {/* Price */}
+          <Text style={styles.productPrice}>
+            {formatCurrency(product.price)}
+          </Text>
+
+          {/* Location */}
+          <View style={styles.locationRow}>
+            <Ionicons
+              name="location-outline"
+              size={18}
+              color={palette.textMuted}
+            />
+            <Text style={styles.locationText}>
+              {product.location || "Ubicación no especificada"}
+            </Text>
+          </View>
+
+          {/* Divider */}
           <View style={styles.divider} />
 
+          {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Descripción</Text>
-            <Text style={styles.description}>
+            <Text style={styles.descriptionText}>
               {product.description ||
                 "El vendedor no ha añadido una descripción detallada para este producto."}
             </Text>
           </View>
 
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Seller */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vendedor</Text>
-            <TouchableOpacity style={styles.sellerCard} activeOpacity={0.8}>
-              <View style={styles.sellerInfo}>
-                <View style={styles.avatar}>
-                  {seller?.avatarUrl && !avatarError ? (
-                    <Image
-                      source={{
-                        uri: getAbsoluteUrl(seller.avatarUrl) as string,
-                      }}
-                      style={styles.avatarImage}
-                      onError={() => setAvatarError(true)}
-                    />
-                  ) : (
-                    <Text style={styles.avatarInitial}>
-                      {seller?.name?.[0]?.toUpperCase() || "S"}
+            <View style={styles.sellerCard}>
+              <View style={styles.sellerAvatarContainer}>
+                {seller?.avatarUrl && !avatarError ? (
+                  <Image
+                    source={{ uri: getAbsoluteUrl(seller.avatarUrl) as string }}
+                    style={styles.sellerAvatar}
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  <View style={styles.sellerAvatarPlaceholder}>
+                    <Text style={styles.sellerInitial}>
+                      {seller?.name?.[0]?.toUpperCase() || "V"}
                     </Text>
-                  )}
-                </View>
-                <View style={styles.sellerText}>
-                  <Text style={styles.sellerName}>
-                    {seller
-                      ? `${seller.name} ${seller.lastname || ""}`.trim()
-                      : "Usuario verificado"}
-                  </Text>
-                  <View style={styles.sellerRating}>
-                    <Ionicons name="star" size={14} color="#FBBF24" />
-                    <Text style={styles.ratingText}>4.8 (12 ventas)</Text>
                   </View>
+                )}
+              </View>
+              <View style={styles.sellerInfo}>
+                <Text style={styles.sellerName}>
+                  {seller
+                    ? `${seller.name} ${seller.lastname || ""}`.trim()
+                    : "Usuario"}
+                </Text>
+                <View style={styles.sellerRating}>
+                  <Ionicons name="star" size={14} color="#FBBF24" />
+                  <Text style={styles.ratingText}>4.8 (12 ventas)</Text>
                 </View>
               </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={palette.textMuted}
-              />
-            </TouchableOpacity>
+            </View>
           </View>
 
+          {/* Safety Tips */}
           <View style={styles.safetyCard}>
-            <View style={styles.safetyHeader}>
+            <View style={styles.safetyIconContainer}>
               <Ionicons
                 name="shield-checkmark-outline"
-                size={20}
+                size={22}
                 color="#15803D"
               />
-              <Text style={styles.safetyTitle}>Compra segura</Text>
             </View>
-            <Text style={styles.safetyText}>
-              Reúnete siempre en lugares públicos y verifica el producto antes
-              de realizar el pago.
-            </Text>
+            <View style={styles.safetyContent}>
+              <Text style={styles.safetyTitle}>Compra segura</Text>
+              <Text style={styles.safetyText}>
+                Reúnete en lugares públicos y verifica el producto antes de
+                pagar.
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Bottom Padding for ScrollView */}
-        <View style={{ height: 100 }} />
+        {/* Bottom Spacing */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Bottom Action Bar */}
       <View
         style={[
           styles.bottomBar,
-          { paddingBottom: insets.bottom ? insets.bottom : spacing.md },
+          { paddingBottom: insets.bottom || spacing.md },
         ]}
       >
         {isSelfProduct ? (
-          <View style={styles.disabledAction}>
+          <View style={styles.ownProductBanner}>
             <Ionicons
               name="information-circle-outline"
               size={20}
               color={palette.textMuted}
             />
-            <Text style={styles.disabledText}>Es tu producto</Text>
+            <Text style={styles.ownProductText}>Este es tu producto</Text>
           </View>
         ) : (
-          <View style={styles.actionButtons}>
+          <View style={styles.actionRow}>
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={styles.shareButton}
               onPress={handleShare}
+              activeOpacity={0.8}
             >
               <Ionicons
                 name="share-social-outline"
-                size={24}
+                size={22}
                 color={palette.primary}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
-                styles.primaryButton,
-                contacting && styles.disabledButton,
+                styles.contactButton,
+                contacting && styles.contactButtonDisabled,
               ]}
               onPress={handleContact}
               disabled={contacting}
+              activeOpacity={0.9}
             >
               <Ionicons
-                name="chatbubble-ellipses-outline"
+                name="chatbubbles-outline"
                 size={20}
                 color={palette.surface}
               />
-              <Text style={styles.primaryButtonText}>
-                {contacting ? "Iniciando..." : "Contactar Vendedor"}
+              <Text style={styles.contactButtonText}>
+                {contacting ? "Conectando..." : "Contactar Vendedor"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -486,17 +533,17 @@ const styles = StyleSheet.create({
     color: palette.surface,
     fontWeight: "600",
   },
+
+  // Gallery
   galleryWrapper: {
     width: "100%",
     height: IMG_HEIGHT,
     position: "relative",
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#F5F5F5",
   },
   gallerySlide: {
     width,
     height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
   },
   galleryImage: {
     width: "100%",
@@ -507,12 +554,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#F5F5F5",
+  },
+  placeholderIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(207, 92, 54, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerGradient: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
+  },
+  bottomGradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
   },
   headerOverlay: {
     position: "absolute",
@@ -522,13 +585,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
   },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.9)",
+  backButtonPill: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.95)",
     alignItems: "center",
     justifyContent: "center",
     ...shadows.sm,
@@ -537,79 +599,91 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
   },
-  galleryIndicator: {
+  actionPill: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.sm,
+  },
+  actionPillActive: {
+    backgroundColor: palette.danger,
+  },
+  dotsContainer: {
     position: "absolute",
-    bottom: spacing.xl + 20, // Adjusted for content overlap
-    right: spacing.md,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
+    bottom: 50,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
   },
-  galleryIndicatorText: {
-    color: palette.surface,
-    fontWeight: "600",
-    fontSize: 12,
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.5)",
   },
+  dotActive: {
+    width: 24,
+    backgroundColor: palette.surface,
+  },
+
+  // Content
   contentContainer: {
     flex: 1,
     backgroundColor: palette.background,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -30,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -28,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.xl,
   },
-  dragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#E0E0E0",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: spacing.lg,
-  },
-  mainInfo: {
-    marginBottom: spacing.lg,
-  },
-  categoryRow: {
+
+  // Tags
+  tagsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  categoryBadge: {
-    backgroundColor: "#F3F4F6",
+  categoryTag: {
+    backgroundColor: palette.muted,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: radius.sm,
   },
-  categoryText: {
+  categoryTagText: {
     fontSize: 12,
-    color: palette.textMuted,
     fontWeight: "600",
+    color: palette.textMuted,
   },
-  statusBadge: {
+  statusTag: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: radius.sm,
   },
-  statusText: {
+  statusTagText: {
     color: palette.surface,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "800",
+
+  // Product Info
+  productTitle: {
+    fontSize: 24,
+    fontWeight: "700",
     color: palette.text,
+    lineHeight: 30,
     marginBottom: spacing.xs,
-    lineHeight: 32,
   },
-  price: {
+  productPrice: {
     fontSize: 28,
-    fontWeight: "900",
+    fontWeight: "800",
     color: palette.primary,
     marginBottom: spacing.md,
   },
@@ -617,72 +691,75 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    marginBottom: spacing.lg,
   },
   locationText: {
+    fontSize: 14,
     color: palette.textMuted,
-    fontSize: typography.body,
     fontWeight: "500",
   },
+
+  // Divider
   divider: {
     height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: spacing.lg,
+    backgroundColor: palette.border,
+    marginBottom: spacing.lg,
   },
+
+  // Section
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: palette.text,
-    marginBottom: spacing.md,
-  },
-  description: {
-    fontSize: typography.body,
-    color: "#4B5563",
-    lineHeight: 24,
-  },
-  sellerCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: palette.surface,
-    padding: spacing.md,
-    borderRadius: radius.xl,
-    ...shadows.sm,
-  },
-  sellerInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: palette.surface,
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-  },
-  avatarInitial: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: palette.primary,
-  },
-  sellerText: {
-    gap: 2,
-  },
-  sellerName: {
     fontSize: 16,
     fontWeight: "700",
     color: palette.text,
+    marginBottom: spacing.sm,
+  },
+  descriptionText: {
+    fontSize: 15,
+    color: "#4B5563",
+    lineHeight: 24,
+  },
+
+  // Seller Card
+  sellerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: palette.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    ...shadows.sm,
+  },
+  sellerAvatarContainer: {
+    marginRight: spacing.md,
+  },
+  sellerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  sellerAvatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: palette.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sellerInitial: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: palette.surface,
+  },
+  sellerInfo: {
+    flex: 1,
+  },
+  sellerName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: palette.text,
+    marginBottom: 4,
   },
   sellerRating: {
     flexDirection: "row",
@@ -690,33 +767,42 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     fontWeight: "500",
   },
+
+  // Safety Card
   safetyCard: {
-    backgroundColor: "#F0FDF4", // Green-50
-    padding: spacing.lg,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#F0FDF4",
+    padding: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: "#DCFCE7",
-  },
-  safetyHeader: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  safetyIconContainer: {
+    marginTop: 2,
+  },
+  safetyContent: {
+    flex: 1,
   },
   safetyTitle: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#15803D", // Green-700
+    fontWeight: "600",
+    color: "#15803D",
+    marginBottom: 2,
   },
   safetyText: {
-    fontSize: 12,
-    color: "#166534", // Green-800
+    fontSize: 13,
+    color: "#166534",
     lineHeight: 18,
   },
+
+  // Bottom Bar
   bottomBar: {
     position: "absolute",
     bottom: 0,
@@ -726,53 +812,54 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingHorizontal: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: palette.border,
     ...shadows.soft,
   },
-  actionButtons: {
+  ownProductBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: palette.muted,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+  },
+  ownProductText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: palette.textMuted,
+  },
+  actionRow: {
     flexDirection: "row",
     gap: spacing.md,
   },
-  secondaryButton: {
-    width: 50,
-    height: 50,
+  shareButton: {
+    width: 52,
+    height: 52,
     borderRadius: radius.lg,
-    backgroundColor: "#FFF5F2",
+    backgroundColor: "#FFF5F0",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#FED7AA",
+    borderColor: "#FEECD7",
   },
-  primaryButton: {
+  contactButton: {
     flex: 1,
+    height: 52,
+    borderRadius: radius.lg,
+    backgroundColor: palette.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-    backgroundColor: palette.primary,
-    borderRadius: radius.lg,
-    height: 50,
     ...shadows.md,
   },
-  primaryButtonText: {
+  contactButtonDisabled: {
+    opacity: 0.7,
+  },
+  contactButtonText: {
     color: palette.surface,
     fontWeight: "700",
     fontSize: 16,
-  },
-  disabledButton: {
-    opacity: 0.7,
-  },
-  disabledAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: "#F3F4F6",
-  },
-  disabledText: {
-    color: palette.textMuted,
-    fontWeight: "600",
   },
 });

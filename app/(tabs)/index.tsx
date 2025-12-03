@@ -82,11 +82,19 @@ export default function HomeScreen() {
   // Debug log for favorites
   useEffect(() => {
     if (featuredProducts.length > 0) {
-      console.log('[HomeScreen] favoriteIds:', Array.from(favoriteIds));
-      console.log('[HomeScreen] Product IDs:', featuredProducts.map(p => p.id));
-      featuredProducts.forEach(p => {
+      console.log("[HomeScreen] favoriteIds:", Array.from(favoriteIds));
+      console.log(
+        "[HomeScreen] Product IDs:",
+        featuredProducts.map((p) => p.id)
+      );
+      featuredProducts.forEach((p) => {
         const numericId = Number(p.id);
-        console.log(`[HomeScreen] Product ${p.id} (${typeof p.id}) -> Number: ${numericId} isFavorite:`, favoriteIds.has(numericId));
+        console.log(
+          `[HomeScreen] Product ${
+            p.id
+          } (${typeof p.id}) -> Number: ${numericId} isFavorite:`,
+          favoriteIds.has(numericId)
+        );
       });
     }
   }, [favoriteIds, featuredProducts]);
@@ -124,9 +132,34 @@ export default function HomeScreen() {
           end={{ x: 1, y: 1 }}
           style={[styles.hero, { paddingTop: insets.top + 20 }]}
         >
-          <View style={styles.heroHeader}>
+          {/* Quick Access Icons */}
+          <View style={styles.quickAccessRow}>
             <View style={styles.heroBadgeContainer}>
               <Text style={styles.heroBadge}>+50.000 panas activos</Text>
+            </View>
+            <View style={styles.quickAccessIcons}>
+              <TouchableOpacity
+                style={styles.quickAccessIcon}
+                onPress={() => router.push("/favoritos")}
+              >
+                <Ionicons name="heart-outline" size={22} color={palette.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickAccessIcon}
+                onPress={() => router.push("/notificaciones")}
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={22}
+                  color={palette.text}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickAccessIcon}
+                onPress={() => router.push("/mis-productos")}
+              >
+                <Ionicons name="cube-outline" size={22} color={palette.text} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -299,6 +332,24 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: palette.primary,
     overflow: "hidden",
+  },
+  quickAccessRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  quickAccessIcons: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  quickAccessIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroTitle: {
     fontSize: 34,

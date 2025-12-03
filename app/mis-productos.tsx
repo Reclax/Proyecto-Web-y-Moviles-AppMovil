@@ -15,13 +15,18 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function MisProductosScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+  const [sortOrder, setSortOrder] = useState<"default" | "asc" | "desc">(
+    "default"
+  );
 
   useEffect(() => {
     loadProducts();
@@ -45,6 +50,28 @@ export default function MisProductosScreen() {
     setRefreshing(false);
   };
 
+  // Ordenar productos
+  const sortedProducts = [...products].sort((a, b) => {
+    if (sortOrder === "asc") {
+      return parseFloat(a.price) - parseFloat(b.price);
+    } else if (sortOrder === "desc") {
+      return parseFloat(b.price) - parseFloat(a.price);
+    }
+    return 0; // Default: sin ordenar
+  });
+
+  const cycleSortOrder = () => {
+    if (sortOrder === "default") setSortOrder("asc");
+    else if (sortOrder === "asc") setSortOrder("desc");
+    else setSortOrder("default");
+  };
+
+  const getSortLabel = () => {
+    if (sortOrder === "asc") return "Menor a mayor";
+    if (sortOrder === "desc") return "Mayor a menor";
+    return "Sin ordenar";
+  };
+
   const handleDelete = (productId: number) => {
     Alert.alert("Eliminar producto", "¿Deseas eliminar esta publicación?", [
       { text: "Cancelar", style: "cancel" },
@@ -64,20 +91,52 @@ export default function MisProductosScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mis productos</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color={palette.text} />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.title}>Mis productos</Text>
+            <Text style={styles.subtitle}>{products.length} publicaciones</Text>
+          </View>
+        </View>
         <TouchableOpacity
           style={styles.newButton}
-          onPress={() => router.push("/vender")}
+          onPress={() => router.push("/(tabs)/vender")}
         >
           <Ionicons name="add" size={18} color={palette.surface} />
           <Text style={styles.newButtonText}>Nuevo</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Sort Control */}
+      {products.length > 0 && (
+        <View style={styles.sortContainer}>
+          <Text style={styles.sortLabel}>Ordenar por precio:</Text>
+          <TouchableOpacity style={styles.sortButton} onPress={cycleSortOrder}>
+            <Text style={styles.sortButtonText}>{getSortLabel()}</Text>
+            <Ionicons
+              name={
+                sortOrder === "asc"
+                  ? "arrow-up"
+                  : sortOrder === "desc"
+                  ? "arrow-down"
+                  : "swap-vertical"
+              }
+              size={16}
+              color={palette.primary}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <FlatList
-        data={products}
+        data={sortedProducts}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={
           <RefreshControl
@@ -178,12 +237,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: palette.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "800",
     color: palette.text,
+  },
+  subtitle: {
+    color: palette.textMuted,
+    marginTop: 2,
   },
   newButton: {
     backgroundColor: palette.primary,
@@ -196,6 +273,34 @@ const styles = StyleSheet.create({
   },
   newButtonText: {
     color: palette.surface,
+    fontWeight: "600",
+  },
+  sortContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  sortLabel: {
+    fontSize: typography.body,
+    color: palette.textMuted,
+  },
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: "#FFF5F2",
+    borderRadius: radius.lg,
+  },
+  sortButtonText: {
+    fontSize: typography.body,
+    color: palette.primary,
     fontWeight: "600",
   },
   listContent: {

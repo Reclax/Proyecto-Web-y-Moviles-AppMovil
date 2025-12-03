@@ -9,6 +9,9 @@ export const palette = {
   textMuted: "#6B6B6B",
   success: "#4CAF50",
   danger: "#FF6B6B",
+  border: "#E5E5E5",
+  warning: "#F59E0B",
+  info: "#3B82F6",
 };
 
 export const radius = {
@@ -72,6 +75,15 @@ export const typography = {
   subtitle: 16,
   body: 14,
   caption: 12,
+  sizes: {
+    xs: 10,
+    sm: 12,
+    md: 14,
+    lg: 16,
+    xl: 20,
+    "2xl": 24,
+    "3xl": 32,
+  },
 };
 
 export type ThemePalette = typeof palette;

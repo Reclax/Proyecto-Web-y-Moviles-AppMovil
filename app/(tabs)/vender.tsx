@@ -1,10 +1,11 @@
+import LocationPicker from "@/components/common/LocationPicker";
 import { categoryAPI, productAPI, userAPI } from "@/services/api";
 import { useAuthStore } from "@/store/authStore";
 import { palette, radius, shadows, spacing, typography } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,7 +26,9 @@ interface FormData {
   description: string;
   price: string;
   location: string;
+  locationCoords: { lat: number; lng: number } | null;
   categoryId: string;
+  subcategoryId: string;
 }
 
 export default function VenderScreen() {
@@ -37,12 +40,35 @@ export default function VenderScreen() {
     description: "",
     price: "",
     location: "",
+    locationCoords: null,
     categoryId: "",
+    subcategoryId: "",
   });
   const [photos, setPhotos] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  // Get subcategories for selected main category
+  const subcategories = useMemo(() => {
+    if (!formData.categoryId) return [];
+    const mainCat = categories.find(
+      (c) => c.id.toString() === formData.categoryId && !c.parentCategoryId
+    );
+    if (mainCat && mainCat.subcategories) {
+      return mainCat.subcategories;
+    }
+    // If categories don't have subcategories embedded, filter from all categories
+    return categories.filter(
+      (c) => c.parentCategoryId?.toString() === formData.categoryId
+    );
+  }, [formData.categoryId, categories]);
+
+  // Main categories (no parent)
+  const mainCategories = useMemo(() => {
+    return categories.filter((c) => !c.parentCategoryId);
+  }, [categories]);
 
   useEffect(() => {
     loadCategories();
@@ -51,13 +77,33 @@ export default function VenderScreen() {
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const data = await categoryAPI.getAll();
+      // Use getMain to get categories with subcategories
+      const data = await categoryAPI.getMain();
       setCategories(data);
     } catch (error) {
       console.error("Error loading categories:", error);
+      // Fallback to getAll if getMain fails
+      try {
+        const allData = await categoryAPI.getAll();
+        setCategories(allData);
+      } catch (e) {
+        console.error("Error loading all categories:", e);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLocationSelect = (locationData: {
+    lat: number;
+    lng: number;
+    address: string;
+  }) => {
+    setFormData({
+      ...formData,
+      location: locationData.address,
+      locationCoords: { lat: locationData.lat, lng: locationData.lng },
+    });
   };
 
   const pickImages = async () => {
@@ -185,8 +231,11 @@ export default function VenderScreen() {
         description: formData.description,
         price: parseFloat(formData.price),
         location: formData.location,
-        categoryId: parseInt(formData.categoryId),
-        locationCoords: { lat: 0, lng: 0 },
+        // Use subcategory if selected, otherwise use main category
+        categoryId: formData.subcategoryId
+          ? parseInt(formData.subcategoryId)
+          : parseInt(formData.categoryId),
+        locationCoords: formData.locationCoords || { lat: 0, lng: 0 },
       };
 
       console.log(
@@ -208,7 +257,9 @@ export default function VenderScreen() {
                 description: "",
                 price: "",
                 location: "",
+                locationCoords: null,
                 categoryId: "",
+                subcategoryId: "",
               });
               setPhotos([]);
               router.push("/(tabs)/productos");
@@ -341,7 +392,7 @@ export default function VenderScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoriesContainer}
             >
-              {categories.map((category) => (
+              {mainCategories.map((category) => (
                 <TouchableOpacity
                   key={category.id}
                   style={[
@@ -353,6 +404,7 @@ export default function VenderScreen() {
                     setFormData({
                       ...formData,
                       categoryId: category.id.toString(),
+                      subcategoryId: "", // Reset subcategory when main category changes
                     })
                   }
                 >
@@ -369,6 +421,48 @@ export default function VenderScreen() {
               ))}
             </ScrollView>
           </View>
+
+          {/* Subcategory - shown only when main category is selected and has subcategories */}
+          {subcategories.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.label}>
+                Subcategoría <Text style={styles.required}>*</Text>
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoriesContainer}
+              >
+                {subcategories.map((subcategory: any) => (
+                  <TouchableOpacity
+                    key={subcategory.id}
+                    style={[
+                      styles.categoryChip,
+                      styles.subcategoryChip,
+                      formData.subcategoryId === subcategory.id.toString() &&
+                        styles.categoryChipSelected,
+                    ]}
+                    onPress={() =>
+                      setFormData({
+                        ...formData,
+                        subcategoryId: subcategory.id.toString(),
+                      })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.categoryChipText,
+                        formData.subcategoryId === subcategory.id.toString() &&
+                          styles.categoryChipTextSelected,
+                      ]}
+                    >
+                      {subcategory.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Description */}
           <View style={styles.section}>
@@ -389,23 +483,46 @@ export default function VenderScreen() {
           {/* Location */}
           <View style={styles.section}>
             <Text style={styles.label}>Ubicación</Text>
-            <View style={styles.inputWithIcon}>
-              <Ionicons
-                name="location-outline"
-                size={20}
-                color={palette.textMuted}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[styles.input, styles.inputPladded]}
-                placeholder="Ej: Quito, Norte"
-                placeholderTextColor={palette.textMuted}
-                value={formData.location}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, location: text })
-                }
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.locationSelectButton}
+              onPress={() => setShowLocationPicker(true)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.locationSelectContent}>
+                <Ionicons
+                  name="location-outline"
+                  size={24}
+                  color={
+                    formData.location ? palette.primary : palette.textMuted
+                  }
+                />
+                <View style={styles.locationTextContainer}>
+                  {formData.location ? (
+                    <>
+                      <Text
+                        style={styles.locationSelectedText}
+                        numberOfLines={1}
+                      >
+                        {formData.location}
+                      </Text>
+                      {formData.locationCoords && (
+                        <Text style={styles.locationCoordsText}>
+                          📍 Ubicación guardada
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.locationPlaceholder}>
+                      Seleccionar ubicación en el mapa
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <Ionicons name="map-outline" size={20} color={palette.primary} />
+            </TouchableOpacity>
+            <Text style={styles.helperText}>
+              Toca para seleccionar tu ubicación en el mapa
+            </Text>
           </View>
 
           {/* Tips Section */}
@@ -460,6 +577,14 @@ export default function VenderScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Location Picker Modal */}
+      <LocationPicker
+        visible={showLocationPicker}
+        onClose={() => setShowLocationPicker(false)}
+        onLocationSelect={handleLocationSelect}
+        initialPosition={formData.locationCoords}
+      />
     </View>
   );
 }
@@ -625,6 +750,44 @@ const styles = StyleSheet.create({
   },
   categoryChipTextSelected: {
     color: palette.surface,
+  },
+  subcategoryChip: {
+    borderColor: palette.primary + "50",
+    backgroundColor: palette.primary + "10",
+  },
+  locationSelectButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.muted,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  locationSelectContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: spacing.sm,
+  },
+  locationTextContainer: {
+    flex: 1,
+  },
+  locationSelectedText: {
+    fontSize: typography.body,
+    color: palette.text,
+    fontWeight: "500",
+  },
+  locationCoordsText: {
+    fontSize: typography.caption,
+    color: palette.success,
+    marginTop: 2,
+  },
+  locationPlaceholder: {
+    fontSize: typography.body,
+    color: palette.textMuted,
   },
   inputWithIcon: {
     position: "relative",

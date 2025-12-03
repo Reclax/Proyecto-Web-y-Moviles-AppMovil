@@ -162,8 +162,8 @@ export default function RegisterScreen() {
       }
 
       await register(data);
-      Alert.alert("¡Éxito!", "Cuenta creada correctamente", [
-        { text: "OK", onPress: () => router.replace("/auth/login") },
+      Alert.alert("¡Éxito!", "Cuenta creada correctamente. ¡Bienvenido!", [
+        { text: "Comenzar", onPress: () => router.replace("/(tabs)") },
       ]);
     } catch (err) {
       console.error("Register error:", err);
