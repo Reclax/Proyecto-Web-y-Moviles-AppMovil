@@ -84,8 +84,9 @@ export default function LoginScreen() {
               <View style={styles.logoContainer}>
                 <Text style={styles.logo}>🛍️</Text>
               </View>
+              <Text style={styles.brandName}>Shop&Buy</Text>
               <Text style={styles.title}>¡Bienvenido de vuelta!</Text>
-              <Text style={styles.subtitle}>Entra a tu cuenta de Shop&Buy</Text>
+              <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
             </View>
 
             {/* Form */}
@@ -306,10 +307,18 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 40,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
+  brandName: {
+    fontSize: 32,
+    fontWeight: "900",
     color: palette.primary,
+    marginBottom: spacing.sm,
+    textAlign: "center",
+    letterSpacing: 1,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: palette.text,
     marginBottom: spacing.xs,
     textAlign: "center",
   },

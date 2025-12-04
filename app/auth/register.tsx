@@ -81,6 +81,52 @@ export default function RegisterScreen() {
     ]);
   };
 
+  /**
+   * Valida una cédula ecuatoriana usando el algoritmo de módulo 10
+   */
+  const validarCedulaEcuatoriana = (cedula: string): boolean => {
+    // Debe tener exactamente 10 dígitos numéricos
+    if (!/^\d{10}$/.test(cedula)) {
+      return false;
+    }
+
+    const digitos = cedula.split("").map(Number);
+
+    // Los dos primeros dígitos corresponden al código de provincia (01-24) o 30
+    const codigoProvincia = parseInt(cedula.substring(0, 2), 10);
+    if (
+      !((codigoProvincia >= 1 && codigoProvincia <= 24) ||
+        codigoProvincia === 30)
+    ) {
+      return false;
+    }
+
+    // El tercer dígito debe ser menor a 6 (para cédulas de personas naturales)
+    const tercerDigito = digitos[2];
+    if (tercerDigito >= 6) {
+      return false;
+    }
+
+    // Algoritmo de validación módulo 10
+    const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+    let suma = 0;
+
+    for (let i = 0; i < 9; i++) {
+      let resultado = digitos[i] * coeficientes[i];
+      // Si el resultado es mayor a 9, se resta 9
+      if (resultado > 9) {
+        resultado -= 9;
+      }
+      suma += resultado;
+    }
+
+    // El dígito verificador es lo que falta para llegar al siguiente múltiplo de 10
+    const digitoVerificadorCalculado = (10 - (suma % 10)) % 10;
+    const digitoVerificador = digitos[9];
+
+    return digitoVerificadorCalculado === digitoVerificador;
+  };
+
   const validateForm = useCallback(() => {
     const { name, lastname, dni, phone, email, password, confirmPassword } =
       formData;
@@ -98,8 +144,10 @@ export default function RegisterScreen() {
       return false;
     }
 
-    if (!/^\d+$/.test(dni) || dni.length !== 10) {
-      setValidationError("La cédula debe tener 10 dígitos numéricos");
+    if (!validarCedulaEcuatoriana(dni)) {
+      setValidationError(
+        "La cédula ingresada no es válida."
+      );
       return false;
     }
 

@@ -4,7 +4,7 @@ import { palette, radius, spacing, typography } from "@/theme";
 import { getAbsoluteUrl } from "@/utils/productUtils";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -73,6 +73,14 @@ export default function ChatScreen() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  
+  // Ref para mantener el currentUserId actualizado en los callbacks
+  const currentUserIdRef = useRef<number | null>(null);
+  
+  // Actualizar ref cuando cambie currentUserId
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   useEffect(() => {
     initializeChat();
@@ -154,17 +162,17 @@ export default function ChatScreen() {
     websocketService.off("messageReadUpdate", handleMessageReadUpdate);
   };
 
-  const handleConnected = () => {
+  const handleConnected = useCallback(() => {
     console.log('[ChatList] WebSocket connected');
     setIsConnected(true);
-  };
+  }, []);
 
-  const handleDisconnected = () => {
+  const handleDisconnected = useCallback(() => {
     console.log('[ChatList] WebSocket disconnected');
     setIsConnected(false);
-  };
+  }, []);
 
-  const handleUserOnline = (data: any) => {
+  const handleUserOnline = useCallback((data: any) => {
     console.log('[ChatList] User online:', data);
     // Update conversation list to show user online status
     setConversations((prev: ConversationUI[]) => 
@@ -174,9 +182,9 @@ export default function ChatScreen() {
           : conv
       )
     );
-  };
+  }, []);
 
-  const handleUserOffline = (data: any) => {
+  const handleUserOffline = useCallback((data: any) => {
     console.log('[ChatList] User offline:', data);
     // Update conversation list to show user offline status
     setConversations((prev: ConversationUI[]) => 
@@ -186,17 +194,18 @@ export default function ChatScreen() {
           : conv
       )
     );
-  };
+  }, []);
 
   // Handler for when messages are marked as read
-  const handleMessageReadUpdate = (data: any) => {
+  const handleMessageReadUpdate = useCallback((data: any) => {
     console.log('[ChatList] Message read update:', data);
     // When another user reads our messages, we might want to update UI
     // But for now, this is mainly used to reduce unread count when we read messages
-  };
+  }, []);
 
-  const handleNewMessage = (message: any) => {
+  const handleNewMessage = useCallback((message: any) => {
     console.log('[ChatList] New message received:', message);
+    console.log('[ChatList] Current user ID ref:', currentUserIdRef.current);
     
     // Update the conversation in the list and move it to the top
     setConversations((prev: ConversationUI[]) => {
@@ -204,27 +213,31 @@ export default function ChatScreen() {
       const existingIndex = prev.findIndex((c) => c.id === convId);
       
       if (existingIndex === -1) {
-        // New conversation, reload all
-        loadConversations();
+        // New conversation, reload all conversations
+        console.log('[ChatList] New conversation detected, reloading all...');
+        // Use setTimeout to avoid calling loadConversations directly in setState
+        setTimeout(() => loadConversations(), 100);
         return prev;
       }
       
       // Update the existing conversation
+      const isFromMe = Number(message.senderId) === currentUserIdRef.current;
+      console.log('[ChatList] Message from me?', isFromMe, 'senderId:', message.senderId);
+      
       const updatedConv = {
         ...prev[existingIndex],
         lastMessage: message.content,
         lastMessageTime: formatMessageTime(message.createdAt || message.sentAt || new Date().toISOString()),
         lastMessageDate: message.createdAt || message.sentAt || new Date().toISOString(),
-        unread: message.senderId !== currentUserId 
-          ? prev[existingIndex].unread + 1 
-          : prev[existingIndex].unread,
+        unread: isFromMe ? prev[existingIndex].unread : prev[existingIndex].unread + 1,
       };
       
       // Remove from current position and add to top
       const newConversations = prev.filter((c) => c.id !== convId);
+      console.log('[ChatList] Moving conversation to top:', convId);
       return [updatedConv, ...newConversations];
     });
-  };
+  }, []);
 
   const loadConversations = async () => {
     try {

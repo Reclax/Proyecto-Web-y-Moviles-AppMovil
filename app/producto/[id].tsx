@@ -171,7 +171,7 @@ export default function ProductDetailScreen() {
     if (!product) return;
     try {
       // URL de la web para compartir el producto
-      const webUrl = process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:5173";
+      const webUrl = process.env.EXPO_PUBLIC_API_URL;
       const productUrl = `${webUrl}/producto/${product.id}`;
 
       await Share.share({
